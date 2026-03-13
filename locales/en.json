@@ -1,0 +1,166 @@
+{
+    "meta": {
+        "language": "English",
+        "code": "en",
+        "version": "1.0.0"
+    },
+    "app": {
+        "name": "INVENTORY",
+        "name_sub": "SYSTEM",
+        "tagline": "Enterprise Inventory Management",
+        "version": "Version"
+    },
+    "login": {
+        "title": "Sign In",
+        "username": "Username",
+        "password": "Password",
+        "submit": "Sign In",
+        "error_empty": "Please enter both username and password.",
+        "error_invalid": "Invalid username or password."
+    },
+    "dashboard": {
+        "title": "Inventory Dashboard",
+        "product_inventory": "Product Inventory",
+        "product_details": "Product Details",
+        "refresh": "Refresh",
+        "clear": "Clear"
+    },
+    "stats": {
+        "total_value": "TOTAL VALUE",
+        "products": "PRODUCTS",
+        "units": "UNITS",
+        "low_stock": "LOW STOCK",
+        "aging": "AGING",
+        "avg_margin": "AVG MARGIN"
+    },
+    "form": {
+        "sku": "SKU",
+        "sku_required": "SKU *",
+        "product_name": "Product Name",
+        "product_name_required": "Product Name *",
+        "brand": "Brand",
+        "price": "Price",
+        "price_required": "Price (₱) *",
+        "cost_price": "Cost Price (₱)",
+        "quantity": "Quantity",
+        "quantity_required": "Quantity *",
+        "category": "Category",
+        "supplier": "Supplier",
+        "min_stock": "Min Stock Alert",
+        "generate": "GEN"
+    },
+    "buttons": {
+        "save_new": "Save New",
+        "update": "Update",
+        "delete": "Delete",
+        "upload_image": "Upload Image",
+        "export_csv": "Export to CSV",
+        "generate_report": "Generate Report",
+        "manage_users": "Manage Users",
+        "sign_out": "Sign Out",
+        "record_sale": "Record Sale",
+        "quick_view": "Quick View"
+    },
+    "sidebar": {
+        "no_image": "NO IMAGE",
+        "view_only": "⚠️ View-Only Mode",
+        "role": "Role"
+    },
+    "search": {
+        "placeholder": "Smart search (SKU, Name, Brand, Supplier)...",
+        "all_categories": "All Categories",
+        "all_status": "All Status",
+        "in_stock": "In Stock",
+        "low_stock": "Low Stock",
+        "critical_stock": "Critical Stock"
+    },
+    "table": {
+        "sku": "SKU",
+        "product_name": "Product Name",
+        "brand": "Brand",
+        "supplier": "Supplier",
+        "price": "Price",
+        "qty": "Qty",
+        "category": "Category",
+        "status": "Status",
+        "health": "Health"
+    },
+    "sales": {
+        "title": "Record Sale",
+        "quantity_to_sell": "Quantity to Sell",
+        "sale_price": "Sale Price per Unit (₱)",
+        "customer_ref": "Customer Reference (optional)",
+        "confirm_sale": "Confirm Sale",
+        "cancel": "Cancel",
+        "success": "Sale recorded successfully!",
+        "insufficient_stock": "Insufficient stock available.",
+        "invalid_quantity": "Please enter a valid quantity."
+    },
+    "barcode": {
+        "detected": "Barcode Detected",
+        "quick_view": "Quick View: {sku}",
+        "not_found": "Product not found: {sku}"
+    },
+    "user_management": {
+        "title": "User Management - Admin Panel",
+        "registered_users": "Registered Users",
+        "register_new": "Register New User",
+        "username": "Username *",
+        "full_name": "Full Name",
+        "password": "Password * (min 6 chars)",
+        "confirm_password": "Confirm Password *",
+        "role": "Role *",
+        "admin": "Admin",
+        "manager": "Manager",
+        "staff": "Staff",
+        "role_desc": "Admin: Full access  |  Manager: Can modify inventory  |  Staff: View only",
+        "register": "Register User",
+        "validation_hint": "✨ Button activates when all fields are valid",
+        "delete_user": "Delete User",
+        "last_login": "Last Login",
+        "never": "Never"
+    },
+    "messages": {
+        "success": "Success",
+        "error": "Error",
+        "warning": "Warning",
+        "confirm": "Confirm",
+        "confirm_delete": "Permanently delete '{name}'?\n\nThis action cannot be undone.",
+        "confirm_update": "Update product '{name}'?",
+        "saved": "Product '{name}' saved successfully.",
+        "updated": "Product '{name}' updated successfully.",
+        "deleted": "Product '{name}' deleted.",
+        "sku_exists": "SKU '{sku}' already exists.",
+        "sku_not_found": "Product with SKU '{sku}' not found.",
+        "selection_required": "Please select a product.",
+        "sku_required": "Please enter or generate a SKU first.",
+        "validation_error": "Validation Error",
+        "invalid_price": "Please enter a valid price (positive number).",
+        "invalid_quantity": "Please enter a valid quantity (whole number ≥ 0)."
+    },
+    "export": {
+        "title": "Export Inventory",
+        "complete": "Export Complete",
+        "success": "Successfully exported {count} products to:\n{path}",
+        "failed": "Export Failed",
+        "error": "Failed to export: {error}"
+    },
+    "report": {
+        "title": "Inventory Report",
+        "generated": "Generated",
+        "by": "Generated by",
+        "summary": "INVENTORY SUMMARY",
+        "health_indicators": "HEALTH INDICATORS",
+        "low_stock_alerts": "LOW STOCK ALERTS",
+        "aging_inventory": "AGING INVENTORY (>90 DAYS)",
+        "low_margin": "LOW MARGIN PRODUCTS (<15%)"
+    },
+    "database": {
+        "connecting": "Connecting to database...",
+        "connected": "Database connected",
+        "error": "Database connection failed",
+        "sqlite": "SQLite (Local)",
+        "postgresql": "PostgreSQL (Cloud)",
+        "mysql": "MySQL (Cloud)"
+    }
+}

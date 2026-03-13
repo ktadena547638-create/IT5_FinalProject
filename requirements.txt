@@ -1,0 +1,19 @@
+# ==============================================================================
+# Inventory System v1.0.0 - Dependencies
+# ==============================================================================
+# 
+# Course:       IT5L (2868)
+# Professor:    Modesto C. Tarrazona
+# Student:      Kenny Ray M. Tadena
+#
+# Installation: pip install -r requirements.txt
+# ==============================================================================
+
+# Image processing for product images
+pillow>=10.0.0
+
+# Secure password hashing (BCrypt 12 rounds)
+bcrypt>=4.0.0
+
+# Optional: For building standalone executable
+# pyinstaller>=6.0.0
