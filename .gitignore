@@ -28,5 +28,17 @@ Thumbs.db
 ~$*.pptx
 ~$*.docx
 
+# Presentation / submission docs
+*.pptx
+*.ppt
+*.docx
+*.doc
+
+# Local academic writeups (kept outside repo)
+PROJECT_DOCUMENT.md
+TITLE_PROPOSAL.md
+IMAGE_CLEANUP_GUIDE.md
+DEPLOYMENT.md
+
 # Archives
 *.zip
