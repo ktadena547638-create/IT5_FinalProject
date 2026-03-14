@@ -1263,9 +1263,55 @@ class DatabaseManager:
                 )
                 driver.commit()
                 logger.info("Default admin user created")
+            
+            # Populate sample data if products table is empty
+            driver.execute("SELECT COUNT(*) as count FROM products")
+            product_count = driver.fetchone()
+            if product_count and product_count['count'] == 0:
+                self._populate_sample_products(driver)
+                logger.info("Sample products populated")
         
         finally:
             driver.close()
+    
+    def _populate_sample_products(self, driver):
+        """Populate database with sample computer parts inventory."""
+        sample_products = [
+            ("CPU-001", "Intel Core i7-13700K", "Intel", 349.99, 250.00, 25, "Processors", "Tech Wholesaler A", "", 3, 0, None),
+            ("CPU-002", "AMD Ryzen 7 7700X", "AMD", 329.99, 240.00, 18, "Processors", "Tech Wholesaler B", "", 3, 0, None),
+            ("GPU-001", "NVIDIA RTX 4080", "NVIDIA", 1199.99, 850.00, 8, "Graphics Cards", "GPU Distributor", "", 2, 0, None),
+            ("GPU-002", "AMD Radeon RX 7900 XTX", "AMD", 899.99, 650.00, 12, "Graphics Cards", "GPU Distributor", "", 2, 0, None),
+            ("RAM-001", "Corsair Vengeance RGB DDR5 32GB", "Corsair", 179.99, 130.00, 45, "Memory", "Memory Supplier", "", 5, 0, None),
+            ("RAM-002", "G.Skill Trident Z5 DDR5 64GB", "G.Skill", 299.99, 220.00, 28, "Memory", "Memory Supplier", "", 5, 0, None),
+            ("SSD-001", "Samsung 990 Pro NVMe 2TB", "Samsung", 249.99, 180.00, 32, "Storage", "Storage Supplier", "", 3, 0, None),
+            ("SSD-002", "WD Black SN850X NVMe 1TB", "Western Digital", 139.99, 100.00, 55, "Storage", "Storage Supplier", "", 5, 0, None),
+            ("MB-001", "ASUS ROG Strix Z790-E Gaming", "ASUS", 549.99, 400.00, 15, "Motherboards", "Motherboard Supplier", "", 2, 0, None),
+            ("MB-002", "MSI MPG B850 Edge WiFi", "MSI", 229.99, 170.00, 20, "Motherboards", "Motherboard Supplier", "", 3, 0, None),
+            ("PSU-001", "Corsair RM1000e 1000W", "Corsair", 199.99, 145.00, 38, "Power Supplies", "PSU Distributor", "", 3, 0, None),
+            ("PSU-002", "EVGA SuperNOVA 850 G6", "EVGA", 129.99, 95.00, 42, "Power Supplies", "PSU Distributor", "", 4, 0, None),
+            ("CASE-001", "Lian Li O11 Dynamic EVO", "Lian Li", 189.99, 135.00, 22, "Cases", "Case Supplier", "", 2, 0, None),
+            ("CASE-002", "NZXT H7 Flow RGB", "NZXT", 149.99, 110.00, 31, "Cases", "Case Supplier", "", 3, 0, None),
+            ("COOL-001", "Corsair iCUE H150i Elite", "Corsair", 189.99, 140.00, 19, "Cooling", "Cooling Supplier", "", 2, 0, None),
+            ("COOL-002", "Noctua NH-D15", "Noctua", 99.99, 72.00, 26, "Cooling", "Cooling Supplier", "", 3, 0, None),
+            ("MON-001", "LG 27\" 4K UltraFine", "LG", 699.99, 500.00, 6, "Monitors", "Monitor Distributor", "", 2, 0, None),
+            ("MON-002", "Dell 27\" Curved Gaming 165Hz", "Dell", 449.99, 320.00, 11, "Monitors", "Monitor Distributor", "", 2, 0, None),
+            ("KB-001", "Corsair K95 Platinum XT Mechanical", "Corsair", 199.99, 145.00, 35, "Peripherals", "Peripheral Supplier", "", 4, 0, None),
+            ("MS-001", "Logitech MX Master 3S", "Logitech", 99.99, 70.00, 48, "Peripherals", "Peripheral Supplier", "", 5, 0, None),
+        ]
+        
+        current_time = datetime.now()
+        insert_sql = """
+            INSERT INTO products 
+            (sku, name, brand, price, cost_price, quantity, category, supplier, image_path, min_stock, total_sold, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        
+        for sku, name, brand, price, cost_price, quantity, category, supplier, image_path, min_stock, total_sold, last_sold in sample_products:
+            try:
+                driver.execute(insert_sql, (sku, name, brand, price, cost_price, quantity, category, supplier, image_path, min_stock, total_sold, current_time, current_time))
+            except Exception as e:
+                # SKU might already exist or other constraint violation, skip
+                logger.warning(f"Could not insert sample product {sku}: {e}")
     
     def _initialize_sql_schema(self, driver):
         """Initialize schema for PostgreSQL/MySQL."""
