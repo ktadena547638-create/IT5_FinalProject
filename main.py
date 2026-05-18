@@ -3637,34 +3637,44 @@ class DashboardView(tk.Frame):
     def _build_ui(self):
         theme = Config.THEME
 
-        # Configure grid
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        # Configure responsive grid layout
+        self.grid_columnconfigure(0, weight=0, minsize=240)  # Sidebar: 240px min
+        self.grid_columnconfigure(1, weight=1)  # Main content: flexible
+        self.grid_rowconfigure(0, weight=1)  # Full height
 
-        # === SIDEBAR ===
+        # Store sidebar reference for toggle functionality
+        self.sidebar_frame = None
+        self.sidebar_visible = True
+        self.sidebar_btn = None
+
+        # === SIDEBAR (COLLAPSIBLE) ===
         self._build_sidebar()
 
-        # === MAIN CONTENT ===
+        # === MAIN CONTENT (RESPONSIVE) ===
         main = tk.Frame(self, bg=theme["bg_primary"])
-        main.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        main.grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(2, weight=1)
 
         # Header with search
         self._build_header(main)
 
-        # Stats row
+        # Stats row (responsive)
         self._build_stats_row(main)
 
-        # Content area (Table + Form)
+        # Content area (Table + Form with PanedWindow)
         self._build_content_area(main)
+
+        # Bind window resize for responsive adjustments
+        self.bind("<Configure>", self._on_window_resize)
 
     def _build_sidebar(self):
         theme = Config.THEME
 
-        sidebar = tk.Frame(self, bg=theme["bg_secondary"], width=240)
+        # Sidebar is now a frame stored on the instance so it can be collapsed
+        sidebar = tk.Frame(self, bg=theme["bg_secondary"])
         sidebar.grid(row=0, column=0, sticky="nsew")
-        sidebar.grid_propagate(False)
+        self.sidebar_frame = sidebar
 
         # Brand
         brand_frame = tk.Frame(sidebar, bg=theme["bg_secondary"])
@@ -3749,6 +3759,13 @@ class DashboardView(tk.Frame):
             fill="x", padx=16, pady=(0, 16)
         )
 
+        # Collapsible toggle button (top-left of window)
+        def _toggle():
+            self._toggle_sidebar()
+
+        self.sidebar_btn = UIComponents.create_button(self, "☰", _toggle, "ghost")
+        self.sidebar_btn.place(relx=0.01, rely=0.02)
+
     def _build_header(self, parent):
         theme = Config.THEME
 
@@ -3813,10 +3830,11 @@ class DashboardView(tk.Frame):
     def _build_stats_row(self, parent):
         theme = Config.THEME
 
+        # Make stat row responsive using grid with equal-weight columns
         stats_frame = tk.Frame(parent, bg=theme["bg_primary"])
         stats_frame.grid(row=1, column=0, sticky="ew", pady=(0, 16))
+        stats_frame.grid_columnconfigure(tuple(range(6)), weight=1)
 
-        # Primary stats (first row)
         primary_cards = [
             ("Total Value", self.stat_vars["total_value"], theme["success"]),
             ("Products", self.stat_vars["total_products"], theme["accent"]),
@@ -3826,9 +3844,9 @@ class DashboardView(tk.Frame):
             ("Avg Margin", self.stat_vars["avg_margin"], "#0891b2"),
         ]
 
-        for title, var, color in primary_cards:
+        for idx, (title, var, color) in enumerate(primary_cards):
             card = UIComponents.create_stat_card(stats_frame, title, var, color)
-            card.pack(side="left", padx=(0, 8))
+            card.grid(row=0, column=idx, sticky="nsew", padx=6)
 
     def _build_content_area(self, parent):
         theme = Config.THEME
@@ -3838,13 +3856,21 @@ class DashboardView(tk.Frame):
         content.grid_columnconfigure(0, weight=1)
         content.grid_rowconfigure(0, weight=1)
 
-        # === TABLE SECTION ===
-        table_container = tk.Frame(content, bg=theme["bg_card"])
-        table_container.grid(row=0, column=0, sticky="nsew", padx=(0, 16))
+        # Use PanedWindow to allow user resizing between table and form
+        pw = tk.PanedWindow(content, orient=tk.HORIZONTAL, sashrelief="raised", bg=theme["bg_primary"])
+        pw.grid(row=0, column=0, sticky="nsew")
+
+        # Left: Table frame (expands more)
+        table_container = tk.Frame(pw, bg=theme["bg_card"])
+        pw.add(table_container, stretch="always")
+
+        # Right: Form frame (collapsible/resizable)
+        form_wrapper = tk.Frame(pw, bg=theme["bg_card"])
+        pw.add(form_wrapper, minsize=300)
 
         # Table header
         table_header = tk.Frame(table_container, bg=theme["bg_card"])
-        table_header.pack(fill="x", padx=16, pady=12)
+        table_header.pack(fill="x", padx=12, pady=12)
 
         tk.Label(
             table_header,
@@ -3899,8 +3925,13 @@ class DashboardView(tk.Frame):
 
         for col in columns:
             self.tree.heading(col, text=col, command=lambda c=col: self._sort_column(c))
+            # Use minwidth and allow stretching; actual widths will be computed on resize
             self.tree.column(
-                col, width=col_widths.get(col, 70), anchor="center" if col in ["Qty", "Status", "Health"] else "w"
+                col,
+                width=col_widths.get(col, 80),
+                minwidth=50,
+                anchor="center" if col in ["Qty", "Status", "Health"] else "w",
+                stretch=True,
             )
 
         # Tags for row colors (stock and health-based) - Refined, soothing colors
@@ -3912,25 +3943,30 @@ class DashboardView(tk.Frame):
         self.tree.tag_configure("normal", background=theme["bg_card"])
         self.tree.tag_configure("stripe", background=theme["table_stripe"])
 
+
         # Scrollbar
         scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
 
-        self.tree.pack(side="left", fill="both", expand=True, padx=(16, 0), pady=(0, 16))
-        scrollbar.pack(side="right", fill="y", pady=(0, 16), padx=(0, 8))
+        self.tree.pack(side="left", fill="both", expand=True, padx=(12, 0), pady=(0, 12))
+        scrollbar.pack(side="right", fill="y", pady=(0, 12), padx=(0, 8))
 
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Double-1>", self._on_double_click)
 
         # === FORM SECTION ===
-        self._build_form(content)
+        # Build form inside the right-hand frame provided to the PanedWindow
+        self._build_form(form_wrapper)
+
+        # Trigger initial responsive column sizing
+        self.after(200, lambda: self._adjust_tree_columns())
 
     def _build_form(self, parent):
         theme = Config.THEME
 
-        form_container = tk.Frame(parent, bg=theme["bg_card"], width=320)
-        form_container.grid(row=0, column=1, sticky="nsew")
-        form_container.grid_propagate(False)
+        # Parent is likely the right pane of a PanedWindow; make form responsive
+        form_container = tk.Frame(parent, bg=theme["bg_card"])
+        form_container.pack(fill="both", expand=True)
 
         # Form header
         header = tk.Frame(form_container, bg=theme["bg_card"])
@@ -4326,6 +4362,67 @@ class DashboardView(tk.Frame):
                 self.form_vars["sku"].set(sku)
                 break
 
+    def _toggle_sidebar(self) -> None:
+        """Show/hide the sidebar to maximize usable workspace."""
+        if not hasattr(self, "sidebar_frame") or self.sidebar_frame is None:
+            return
+
+        if self.sidebar_visible:
+            # Hide sidebar
+            self.sidebar_frame.grid_remove()
+            self.sidebar_visible = False
+            # Expand main column
+            self.grid_columnconfigure(1, weight=1)
+        else:
+            # Show sidebar
+            self.sidebar_frame.grid()
+            self.sidebar_visible = True
+            self.grid_columnconfigure(0, weight=0, minsize=240)
+
+    def _on_window_resize(self, event=None) -> None:
+        """Handle window resize events to adjust column widths responsively."""
+        # Debounce if tree not available yet
+        try:
+            self._adjust_tree_columns()
+        except Exception:
+            pass
+
+    def _adjust_tree_columns(self) -> None:
+        """Calculate and set treeview column widths based on available space."""
+        if not hasattr(self, "tree") or self.tree is None:
+            return
+
+        # Get available width inside tree container
+        tree_container = self.tree.master
+        avail = tree_container.winfo_width() or self.winfo_width()
+        # Subtract scrollbar and padding
+        avail -= 60
+
+        # Define relative ratios for columns
+        ratios = {
+            "SKU": 0.08,
+            "Product Name": 0.32,
+            "Brand": 0.10,
+            "Supplier": 0.12,
+            "Price": 0.08,
+            "Qty": 0.06,
+            "Category": 0.10,
+            "Status": 0.06,
+            "Health": 0.06,
+        }
+
+        # Fallback evenly if ratios missing
+        total_ratio = sum(ratios.values())
+        if total_ratio <= 0:
+            total_ratio = len(ratios)
+
+        for col, ratio in ratios.items():
+            try:
+                width = max(60, int(avail * (ratio / total_ratio)))
+                self.tree.column(col, width=width)
+            except Exception:
+                continue
+
     def _on_barcode_scan(self, barcode: str):
         """
         Handle barcode scanner input with Quick-View popup.
@@ -4490,7 +4587,12 @@ class DashboardView(tk.Frame):
 
                 # Load and cache new image with optimized memory usage
                 with Image.open(path) as img:
-                    img = img.resize((200, 160), Image.Resampling.LANCZOS)
+                    # Resize image to fit current sidebar image frame; adaptively scale
+                    target_w = getattr(self, 'img_label', None) and getattr(self.img_label, 'winfo_width', lambda: 200)() or 200
+                    target_h = getattr(self, 'img_label', None) and getattr(self.img_label, 'winfo_height', lambda: 160)() or 160
+                    if not target_w or not target_h:
+                        target_w, target_h = 200, 160
+                    img = img.resize((max(100, target_w), max(80, target_h)), Image.Resampling.LANCZOS)
                     photo = ImageTk.PhotoImage(img)
 
                 # Store in weak cache and strong reference on label
