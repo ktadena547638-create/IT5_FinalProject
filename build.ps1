@@ -1,13 +1,6 @@
 # ==============================================================================
-# INVENTORY SYSTEM - Build Script
-# Version: 1.0.0
-# 
-# USAGE:
-#   .\build.ps1                    # Full build
-#   .\build.ps1 -Clean             # Clean build (removes previous artifacts)
-#   .\build.ps1 -SkipDeps          # Skip dependency installation
-#   .\build.ps1 -Debug             # Build with console window for debugging
-#
+# CIS (Computer Inventory System) - Build Script
+# Version: 1.0.1
 # ==============================================================================
 
 param(
@@ -19,212 +12,154 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$AppName = "Inventory System"
-$Version = "1.0.0"
-$SpecFile = "Inventory_System.spec"
+$AppName = "CIS"
+$Version = "1.0.1"
 $MainScript = "main.py"
 $DistDir = "dist"
 $BuildDir = "build"
 
-# Colors for output
-function Write-Header { param($msg) Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan; Write-Host "║ $msg" -ForegroundColor Cyan; Write-Host "╚══════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan }
-function Write-Step { param($msg) Write-Host "→ $msg" -ForegroundColor Yellow }
-function Write-Success { param($msg) Write-Host "✓ $msg" -ForegroundColor Green }
-function Write-Error { param($msg) Write-Host "✗ $msg" -ForegroundColor Red }
-
-# ==============================================================================
-# HEADER
-# ==============================================================================
-
-Write-Header "$AppName v$Version - BUILD SYSTEM"
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "CIS v$Version - BUILD SYSTEM" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
 
 # ==============================================================================
 # PREREQUISITES CHECK
 # ==============================================================================
 
-Write-Step "Checking prerequisites..."
+Write-Host "[1/6] Checking prerequisites..." -ForegroundColor Yellow
 
-# Check Python
 try {
     $pythonVersion = python --version 2>&1
-    Write-Success "Python: $pythonVersion"
+    Write-Host "  [OK] Python: $pythonVersion" -ForegroundColor Green
 } catch {
-    Write-Error "Python not found! Please install Python 3.9+ and add to PATH."
+    Write-Host "  [ERROR] Python not found" -ForegroundColor Red
     exit 1
 }
 
-# Check if main script exists
 if (-not (Test-Path $MainScript)) {
-    Write-Error "Main script not found: $MainScript"
+    Write-Host "  [ERROR] Main script not found: $MainScript" -ForegroundColor Red
     exit 1
 }
-Write-Success "Main script found: $MainScript"
+Write-Host "  [OK] Main script found: $MainScript" -ForegroundColor Green
 
 # ==============================================================================
 # CLEAN (Optional)
 # ==============================================================================
 
 if ($Clean) {
-    Write-Step "Cleaning previous build artifacts..."
-    
+    Write-Host "[2/6] Cleaning previous artifacts..." -ForegroundColor Yellow
+
     if (Test-Path $DistDir) {
         Remove-Item -Recurse -Force $DistDir
-        Write-Success "Removed: $DistDir"
+        Write-Host "  [OK] Removed: $DistDir" -ForegroundColor Green
     }
-    
+
     if (Test-Path $BuildDir) {
         Remove-Item -Recurse -Force $BuildDir
-        Write-Success "Removed: $BuildDir"
+        Write-Host "  [OK] Removed: $BuildDir" -ForegroundColor Green
     }
-    
-    # Clean PyInstaller cache
-    $cacheDir = "__pycache__"
-    if (Test-Path $cacheDir) {
-        Remove-Item -Recurse -Force $cacheDir
+
+    if (Test-Path "__pycache__") {
+        Remove-Item -Recurse -Force "__pycache__"
     }
+} else {
+    Write-Host "[2/6] Skipping clean (use -Clean to rebuild from scratch)" -ForegroundColor Gray
 }
 
 # ==============================================================================
 # DEPENDENCIES
 # ==============================================================================
 
+Write-Host "[3/6] Installing dependencies..." -ForegroundColor Yellow
+
 if (-not $SkipDeps) {
-    Write-Step "Installing/Updating dependencies..."
-    
-    # Core dependencies
     $packages = @(
         "pyinstaller>=6.0",
         "pillow>=10.0",
         "bcrypt>=4.0"
     )
-    
+
     foreach ($pkg in $packages) {
-        Write-Host "  Installing: $pkg" -ForegroundColor Gray
-        pip install $pkg --quiet --upgrade
+        pip install $pkg --quiet --upgrade 2>$null
     }
-    
-    Write-Success "All dependencies installed"
+    Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
+} else {
+    Write-Host "  [WARN] Skipping dependency installation" -ForegroundColor Yellow
 }
 
 # ==============================================================================
 # ASSETS CHECK
 # ==============================================================================
 
-Write-Step "Checking assets..."
+Write-Host "[4/6] Checking assets..." -ForegroundColor Yellow
 
-$assetsDir = "assets"
-if (-not (Test-Path $assetsDir)) {
-    New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
-    Write-Success "Created: $assetsDir"
+if (-not (Test-Path "assets")) {
+    New-Item -ItemType Directory -Path "assets" -Force | Out-Null
 }
-
-$iconPath = "$assetsDir/icon.ico"
-if (-not (Test-Path $iconPath)) {
-    Write-Host "  ⚠ No icon found at: $iconPath" -ForegroundColor Yellow
-    Write-Host "    The build will continue without a custom icon." -ForegroundColor Yellow
-}
-
-# ==============================================================================
-# BUILD CONFIGURATION
-# ==============================================================================
-
-Write-Step "Configuring build..."
-
-if ($Debug) {
-    Write-Host "  Mode: DEBUG (console window enabled)" -ForegroundColor Yellow
-    
-    # Modify spec for debug build
-    if (Test-Path $SpecFile) {
-        $specContent = Get-Content $SpecFile -Raw
-        $specContent = $specContent -replace "console=False", "console=True"
-        $specContent | Set-Content "$SpecFile.debug" -Encoding UTF8
-        $buildSpec = "$SpecFile.debug"
-    } else {
-        $buildSpec = $null
-    }
-} else {
-    Write-Host "  Mode: RELEASE (no console)" -ForegroundColor Gray
-    $buildSpec = $SpecFile
-}
+Write-Host "  [OK] Assets directory ready" -ForegroundColor Green
 
 # ==============================================================================
 # PYINSTALLER BUILD
 # ==============================================================================
 
-Write-Header "BUILDING EXECUTABLE"
-
-Write-Step "Running PyInstaller..."
-Write-Host "  This may take 1-3 minutes..." -ForegroundColor Gray
+Write-Host "[5/6] Building executable with PyInstaller..." -ForegroundColor Yellow
+Write-Host "  (This may take 1-3 minutes...)" -ForegroundColor Gray
 Write-Host ""
 
+$buildArgs = @(
+    $MainScript,
+    "--name=$AppName",
+    "--onefile",
+    "--noconsole",
+    "--clean",
+    "--noconfirm",
+    "--add-data=assets;assets"
+)
+
+if ($Debug) {
+    Write-Host "  Command: pyinstaller $($buildArgs -join ' ')" -ForegroundColor DarkGray
+}
+
 try {
-    if ($buildSpec -and (Test-Path $buildSpec)) {
-        Write-Host "  Using spec file: $buildSpec" -ForegroundColor Gray
-        pyinstaller $buildSpec --clean --noconfirm
-    } else {
-        Write-Host "  Building with command line options" -ForegroundColor Gray
-        $buildArgs = @(
-            $MainScript,
-            "--name", $AppName,
-            "--onefile",
-            "--noconsole",
-            "--clean",
-            "--noconfirm",
-            "--add-data", "assets;assets",
-            "--hidden-import", "bcrypt",
-            "--hidden-import", "PIL._tkinter_finder"
-        )
-        
-        if (Test-Path $iconPath) {
-            $buildArgs += "--icon"
-            $buildArgs += $iconPath
-        }
-        
-        pyinstaller @buildArgs
-    }
-    
-    Write-Success "PyInstaller completed successfully"
+    python -m PyInstaller @buildArgs
+    Write-Host ""
+    Write-Host "  [OK] Build completed" -ForegroundColor Green
 } catch {
-    Write-Error "PyInstaller failed: $_"
+    Write-Host "  [ERROR] Build failed: $_" -ForegroundColor Red
     exit 1
 }
 
 # ==============================================================================
-# POST-BUILD
+# POST-BUILD VERIFICATION
 # ==============================================================================
 
-$exePath = "$DistDir/$AppName.exe"
+Write-Host "[6/6] Verifying executable..." -ForegroundColor Yellow
+
+$exePath = Join-Path $DistDir "$AppName.exe"
 
 if (Test-Path $exePath) {
     $exeInfo = Get-Item $exePath
     $sizeMB = [math]::Round($exeInfo.Length / 1MB, 2)
-    
-    Write-Header "BUILD SUCCESSFUL"
-    
-    Write-Host "  Executable: $exePath" -ForegroundColor Green
-    Write-Host "  Size: $sizeMB MB" -ForegroundColor Green
-    Write-Host "  Created: $($exeInfo.LastWriteTime)" -ForegroundColor Green
+
     Write-Host ""
-    
-    # Clean up debug spec if created
-    if ($Debug -and (Test-Path "$SpecFile.debug")) {
-        Remove-Item "$SpecFile.debug" -Force
-    }
-    
-    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║ NEXT STEPS                                                   ║" -ForegroundColor Cyan
-    Write-Host "╠══════════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host "║ 1. Test the executable:                                      ║" -ForegroundColor Cyan
-    Write-Host "║    .\dist\Inventory System.exe                               ║" -ForegroundColor White
-    Write-Host "║                                                              ║" -ForegroundColor Cyan
-    Write-Host "║ 2. Create desktop shortcut:                                  ║" -ForegroundColor Cyan
-    Write-Host "║    .\create_shortcut.ps1                                     ║" -ForegroundColor White
-    Write-Host "║                                                              ║" -ForegroundColor Cyan
-    Write-Host "║ 3. User data location:                                       ║" -ForegroundColor Cyan
-    Write-Host "║    %LOCALAPPDATA%\InventorySystem\                           ║" -ForegroundColor White
-    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    
+    Write-Host "========================================" -ForegroundColor Green
+    Write-Host "BUILD SUCCESSFUL" -ForegroundColor Green
+    Write-Host "========================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Executable: $exePath" -ForegroundColor Green
+    Write-Host "Size: $sizeMB MB" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "NEXT STEPS:" -ForegroundColor Cyan
+    Write-Host "  1. Create desktop shortcut: .\create_shortcut.ps1" -ForegroundColor White
+    Write-Host "  2. Run the application: .\dist\CIS.exe" -ForegroundColor White
+    Write-Host ""
 } else {
-    Write-Error "Executable not found at expected location: $exePath"
+    Write-Host ""
+    Write-Host "BUILD FAILED" -ForegroundColor Red
+    Write-Host "Executable not found at: $exePath" -ForegroundColor Red
     exit 1
 }
+
+Write-Host ""

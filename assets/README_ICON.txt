@@ -1,4 +1,4 @@
-# D-INVENTY PRO™ - Icon Instructions
+# CIS (Computer Inventory System) - Icon Instructions
 # ==================================
 #
 # Place your custom application icon here named 'icon.ico'
