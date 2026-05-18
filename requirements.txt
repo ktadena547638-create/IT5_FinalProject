@@ -1,19 +1,50 @@
 # ==============================================================================
-# Inventory System v1.0.0 - Dependencies
+# Computer Inventory System (CIS) v1.0.1 - Dependencies
 # ==============================================================================
-# 
+#
 # Course:       IT5L (2868)
 # Professor:    Modesto C. Tarrazona
 # Student:      Kenny Ray M. Tadena
+# Date:         February 2026
 #
 # Installation: pip install -r requirements.txt
 # ==============================================================================
 
-# Image processing for product images
+# Core Dependencies
+# ==================
+
+# Image processing for product images and UI rendering
 pillow>=10.0.0
 
-# Secure password hashing (BCrypt 12 rounds)
+# Secure password hashing with BCrypt (12 rounds)
 bcrypt>=4.0.0
 
-# Optional: For building standalone executable
-# pyinstaller>=6.0.0
+# Build & Distribution
+# ====================
+
+# PyInstaller for building standalone executables
+pyinstaller>=6.0.0
+
+# Presentation generation for academic deliverables
+python-pptx>=0.6.21
+
+# Development & Testing (Optional)
+# ==================================
+
+# Code formatting and linting
+black>=23.0.0
+flake8>=6.0.0
+pylint>=3.0.0
+isort>=5.0.0
+
+# Testing framework
+pytest>=9.0.0
+
+# Optional Database Drivers (Install as needed)
+# ==============================================
+
+# PostgreSQL support (uncomment to use)
+# psycopg2-binary>=2.9.0
+
+# MySQL support (uncomment to use)
+# mysql-connector-python>=8.0.0
