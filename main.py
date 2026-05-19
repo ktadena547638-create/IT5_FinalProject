@@ -3705,9 +3705,9 @@ class DashboardView(tk.Frame):
             fill="x", pady=4
         )
 
-        UIComponents.create_button(btn_frame, "Export to CSV", self._export_csv, "warning", icon="📊").pack(
-            fill="x", pady=4
-        )
+        # Export button: keep reference to enable/disable during long-running export
+        self.export_btn = UIComponents.create_button(btn_frame, "Export to CSV", self._export_csv, "warning", icon="📊")
+        self.export_btn.pack(fill="x", pady=4)
 
         # Manager/Admin: Record Sale (POS)
         if self.can_modify:
@@ -4622,7 +4622,12 @@ class DashboardView(tk.Frame):
         if not file_path:
             return
 
-        # Show loading indicator
+        # Disable button + Show loading indicator
+        try:
+            self.export_btn.config(state="disabled")
+        except Exception:
+            pass
+
         loading = UIComponents.show_loading(self, "Exporting inventory...")
 
         def do_export() -> tuple:
@@ -4630,23 +4635,40 @@ class DashboardView(tk.Frame):
             from utils.export_utils import export_products_to_csv
 
             # Use configured DB path (portable) when available
-            db_path = getattr(Config, "DB_PATH", None) or "dist/data/inventory.db"
-            count, out = export_products_to_csv(db_path, file_path)
+            db_path = getattr(Config, "DB_PATH", None) or Path("dist") / "data" / "inventory.db"
+            count, out = export_products_to_csv(db_path, Path(file_path))
             return count, out
 
         def on_complete(result: tuple):
             """Handle export completion."""
-            loading.destroy()
+            try:
+                loading.destroy()
+            except Exception:
+                pass
             count, path = result
-            self.audit_repo.log("EXPORT", "inventory", "", f"Exported {count} products to CSV", self.user.username)
+            try:
+                self.audit_repo.log("EXPORT", "inventory", "", f"Exported {count} products to CSV", self.user.username)
+            except Exception:
+                logger.exception("Failed to write audit log for export")
             messagebox.showinfo("Export Complete", f"Successfully exported {count} products to:\n{path}")
             logger.info("Inventory exported to: %s", path)
+            try:
+                self.export_btn.config(state="normal")
+            except Exception:
+                pass
 
         def on_error(e: Exception):
             """Handle export error."""
-            loading.destroy()
-            logger.error("Export failed: %s", e)
+            try:
+                loading.destroy()
+            except Exception:
+                pass
+            logger.exception("Export failed")
             messagebox.showerror("Export Failed", f"Failed to export: {e}")
+            try:
+                self.export_btn.config(state="normal")
+            except Exception:
+                pass
 
         run_in_background(target=do_export, on_complete=on_complete, on_error=on_error, master=self.master)
 
