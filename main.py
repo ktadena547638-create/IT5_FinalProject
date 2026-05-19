@@ -4626,51 +4626,13 @@ class DashboardView(tk.Frame):
         loading = UIComponents.show_loading(self, "Exporting inventory...")
 
         def do_export() -> tuple:
-            """Background export task."""
-            products = self.product_repo.get_all()
+            """Background export task using a reliable DB-level exporter."""
+            from utils.export_utils import export_products_to_csv
 
-            with open(file_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(
-                    [
-                        "SKU",
-                        "Product Name",
-                        "Brand",
-                        "Price",
-                        "Cost Price",
-                        "Profit Margin %",
-                        "Quantity",
-                        "Category",
-                        "Supplier",
-                        "Min Stock",
-                        "Total Value",
-                        "Days in Stock",
-                        "Health Score",
-                        "Total Sold",
-                    ]
-                )
-
-                for p in products:
-                    writer.writerow(
-                        [
-                            p.sku,
-                            p.name,
-                            p.brand,
-                            float(p.price),
-                            float(p.cost_price),
-                            f"{p.profit_margin:.1f}" if p.profit_margin else "N/A",
-                            p.quantity,
-                            p.category,
-                            p.supplier,
-                            p.min_stock,
-                            float(p.total_value),
-                            p.days_in_stock,
-                            p.health_score,
-                            p.total_sold,
-                        ]
-                    )
-
-            return len(products), file_path
+            # Use configured DB path (portable) when available
+            db_path = getattr(Config, "DB_PATH", None) or "dist/data/inventory.db"
+            count, out = export_products_to_csv(db_path, file_path)
+            return count, out
 
         def on_complete(result: tuple):
             """Handle export completion."""
