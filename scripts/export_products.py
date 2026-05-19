@@ -1,6 +1,7 @@
 from pathlib import Path
-from utils.export_utils import export_products_to_csv
+
 from main import Config
+from utils.export_utils import export_products_to_csv
 
 
 def main():

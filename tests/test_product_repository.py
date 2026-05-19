@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from main import ProductRepository, Product
+from main import Product, ProductRepository
 from tests.conftest import DBManager
 
 

@@ -12,7 +12,10 @@ def test_user_create_authenticate_and_delete():
     username = "tester"
     password = "secret"
 
-    assert repo.create_user(username, password, UserRole.MANAGER, full_name="Tester") is True
+    assert (
+        repo.create_user(username, password, UserRole.MANAGER, full_name="Tester")
+        is True
+    )
 
     user = repo.authenticate(username, password)
     assert user is not None

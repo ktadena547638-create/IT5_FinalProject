@@ -23,8 +23,8 @@ and application entrypoints used by the project and tests.
 
 from __future__ import annotations
 
-import csv
 import gc
+import importlib
 import json
 import logging
 import os
@@ -37,7 +37,6 @@ import threading
 import time
 import tkinter as tk
 import weakref
-import importlib
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -141,7 +140,13 @@ def get_screen_scale_factor() -> float:
 
                 return NSScreen.mainScreen().backingScaleFactor()
             except ImportError:
-                return 2.0 if os.popen("system_profiler SPDisplaysDataType | grep -i retina").read() else 1.0
+                return (
+                    2.0
+                    if os.popen(
+                        "system_profiler SPDisplaysDataType | grep -i retina"
+                    ).read()
+                    else 1.0
+                )
 
         else:  # Linux/BSD
             # Try Xorg xdpyinfo or GDK
@@ -235,7 +240,9 @@ class Config:
     # Default: SQLite (portable, single-machine)
     # For cloud: Set DB_DRIVER and DB_CONNECTION_STRING
     DB_DRIVER: str = "sqlite"  # "sqlite" | "postgresql" | "mysql"
-    DB_CONNECTION_STRING: str = ""  # e.g., "host=localhost dbname=inventory user=admin password=secret"
+    DB_CONNECTION_STRING: str = (
+        ""  # e.g., "host=localhost dbname=inventory user=admin password=secret"
+    )
     DB_POOL_SIZE: int = 5  # Connection pool size for PostgreSQL/MySQL
 
     # ==== PAGINATION (Scalability for 100k+ products) ====
@@ -265,22 +272,18 @@ class Config:
         "bg_secondary": "#141d35",  # Softer secondary (warmer)
         "bg_tertiary": "#1f2d47",  # Elevated tertiary
         "bg_card": "#151f3b",  # Card background (refined)
-
         # Text colors - improved contrast and readability
         "fg_primary": "#f1f5f9",  # Brighter white (better contrast)
         "fg_secondary": "#a8b5c8",  # Softer secondary text
         "fg_muted": "#7a8599",  # Muted text (softer)
-
         # Accent colors - more refined and modern
         "accent": "#4f9aff",  # Modern blue (softer, more soothing)
         "accent_hover": "#3a85ff",  # Hover blue
         "accent_active": "#2a6ce0",  # Active blue
-
         # Status colors - refined palette
         "success": "#2ecc71",  # Emerald green (softer)
         "warning": "#f5a623",  # Softer amber
         "danger": "#e74c3c",  # Refined red
-
         # Additional colors for improved design
         "info": "#4f9aff",  # Info (same as accent)
         "border": "#2a3752",  # Softer borders
@@ -289,7 +292,6 @@ class Config:
         "input_border": "#2a3752",  # Input border
         "table_stripe": "#141f35",  # Table stripe (softer)
         "table_hover": "#1f2d47",  # Table hover (new)
-
         # Semantic colors for health indicators
         "health_excellent": "#2ecc71",  # Green
         "health_good": "#4f9aff",  # Blue
@@ -324,7 +326,9 @@ try:
 except (PermissionError, OSError):
     # Fallback to console-only logging if file access fails
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s", handlers=[logging.StreamHandler()]
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)-8s | %(message)s",
+        handlers=[logging.StreamHandler()],
     )
 logger = logging.getLogger(__name__)
 
@@ -399,9 +403,22 @@ class I18n:
 
         default_translations = {
             "meta": {"language": "English", "code": "en", "version": "1.0.0"},
-            "app": {"name": "INVENTORY", "name_sub": "SYSTEM", "tagline": "Enterprise Inventory Management"},
-            "login": {"title": "Sign In", "username": "Username", "password": "Password", "submit": "Sign In"},
-            "dashboard": {"title": "Inventory Dashboard", "refresh": "Refresh", "clear": "Clear"},
+            "app": {
+                "name": "INVENTORY",
+                "name_sub": "SYSTEM",
+                "tagline": "Enterprise Inventory Management",
+            },
+            "login": {
+                "title": "Sign In",
+                "username": "Username",
+                "password": "Password",
+                "submit": "Sign In",
+            },
+            "dashboard": {
+                "title": "Inventory Dashboard",
+                "refresh": "Refresh",
+                "clear": "Clear",
+            },
             "messages": {"success": "Success", "error": "Error", "warning": "Warning"},
         }
 
@@ -579,7 +596,13 @@ def run_in_background(
     Returns:
         BackgroundTask instance
     """
-    task = BackgroundTask(target=target, args=args, on_complete=on_complete, on_error=on_error, master=master)
+    task = BackgroundTask(
+        target=target,
+        args=args,
+        on_complete=on_complete,
+        on_error=on_error,
+        master=master,
+    )
     task.start()
     return task
 
@@ -724,10 +747,14 @@ class PostgreSQLDriver(DatabaseDriver):
 
     def connect(self):
         if not HAS_POSTGRES:
-            raise ImportError("psycopg2 is required for PostgreSQL. Install with: pip install psycopg2-binary")
+            raise ImportError(
+                "psycopg2 is required for PostgreSQL. Install with: pip install psycopg2-binary"
+            )
 
         # Parse connection string to dict
-        params = dict(item.split("=") for item in self.connection_string.split() if "=" in item)
+        params = dict(
+            item.split("=") for item in self.connection_string.split() if "=" in item
+        )
 
         # Import pooling implementation lazily to avoid unused top-level names
         from psycopg2 import pool as pg_pool
@@ -795,7 +822,9 @@ class MySQLDriver(DatabaseDriver):
             )
 
         # Parse connection string to dict
-        params = dict(item.split("=") for item in self.connection_string.split() if "=" in item)
+        params = dict(
+            item.split("=") for item in self.connection_string.split() if "=" in item
+        )
         params["pool_size"] = self.pool_size
         params["pool_name"] = "inventory_pool"
         # Import pooling implementation lazily to avoid unused top-level names
@@ -901,7 +930,7 @@ class BarcodeListener:
         # Check if this is a rapid keystroke (scanner behavior)
         time_diff = current_time - self._last_keystroke
 
-        if event.keysym in ('Return', 'Tab'):
+        if event.keysym in ("Return", "Tab"):
             # End of barcode scan
             if self._is_scanning and len(self._buffer) >= self.min_length:
                 barcode = self._buffer
@@ -1304,7 +1333,9 @@ class DatabaseManager:
             # Create indexes that depend on migrated columns
             if self._driver_type == "sqlite":
                 try:
-                    driver.execute("CREATE INDEX IF NOT EXISTS idx_sales_user ON sales_history(user)")
+                    driver.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_sales_user ON sales_history(user)"
+                    )
                     driver.commit()
                 except Exception:
                     pass  # Index may already exist or column may not exist yet
@@ -1314,7 +1345,9 @@ class DatabaseManager:
             admin_exists = driver.fetchone()
 
             if not admin_exists:
-                password_hash = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
+                password_hash = bcrypt.hashpw(
+                    "admin123".encode(), bcrypt.gensalt()
+                ).decode()
                 driver.execute(
                     "INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)",
                     ("admin", password_hash, "admin", "System Administrator"),
@@ -1517,7 +1550,20 @@ class DatabaseManager:
                 0,
                 None,
             ),
-            ("CASE-002", "NZXT H7 Flow RGB", "NZXT", 149.99, 110.00, 31, "Cases", "Case Supplier", "", 3, 0, None),
+            (
+                "CASE-002",
+                "NZXT H7 Flow RGB",
+                "NZXT",
+                149.99,
+                110.00,
+                31,
+                "Cases",
+                "Case Supplier",
+                "",
+                3,
+                0,
+                None,
+            ),
             (
                 "COOL-001",
                 "Corsair iCUE H150i Elite",
@@ -1532,7 +1578,20 @@ class DatabaseManager:
                 0,
                 None,
             ),
-            ("COOL-002", "Noctua NH-D15", "Noctua", 99.99, 72.00, 26, "Cooling", "Cooling Supplier", "", 3, 0, None),
+            (
+                "COOL-002",
+                "Noctua NH-D15",
+                "Noctua",
+                99.99,
+                72.00,
+                26,
+                "Cooling",
+                "Cooling Supplier",
+                "",
+                3,
+                0,
+                None,
+            ),
             (
                 "MON-001",
                 'LG 27" 4K UltraFine',
@@ -1720,9 +1779,13 @@ class DatabaseManager:
 
         migrations = []
         if "cost_price" not in columns:
-            migrations.append("ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0")
+            migrations.append(
+                "ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0"
+            )
         if "total_sold" not in columns:
-            migrations.append("ALTER TABLE products ADD COLUMN total_sold INTEGER DEFAULT 0")
+            migrations.append(
+                "ALTER TABLE products ADD COLUMN total_sold INTEGER DEFAULT 0"
+            )
         if "last_sold_at" not in columns:
             migrations.append("ALTER TABLE products ADD COLUMN last_sold_at TIMESTAMP")
 
@@ -1742,17 +1805,29 @@ class DatabaseManager:
         sales_migrations = []
         if sales_columns:  # Only migrate if table exists
             if "product_name" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN product_name TEXT DEFAULT ''")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN product_name TEXT DEFAULT ''"
+                )
             if "cost_price" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN cost_price REAL DEFAULT 0")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN cost_price REAL DEFAULT 0"
+                )
             if "profit" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN profit REAL DEFAULT 0")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN profit REAL DEFAULT 0"
+                )
             if "customer_ref" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN customer_ref TEXT DEFAULT ''")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN customer_ref TEXT DEFAULT ''"
+                )
             if "payment_method" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN payment_method TEXT DEFAULT 'cash'")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN payment_method TEXT DEFAULT 'cash'"
+                )
             if "user" not in sales_columns:
-                sales_migrations.append("ALTER TABLE sales_history ADD COLUMN user TEXT DEFAULT ''")
+                sales_migrations.append(
+                    "ALTER TABLE sales_history ADD COLUMN user TEXT DEFAULT ''"
+                )
 
         for sql in sales_migrations:
             try:
@@ -1855,7 +1930,10 @@ class SalesRepository:
                 (quantity, quantity, sku),
             )
 
-            return True, f"Sale recorded: {quantity}x {product_name} = ₱{total:,.2f} (Profit: ₱{profit:,.2f})"
+            return (
+                True,
+                f"Sale recorded: {quantity}x {product_name} = ₱{total:,.2f} (Profit: ₱{profit:,.2f})",
+            )
 
     def get_sales_velocity(self, sku: str, days: int = 30) -> float:
         """Calculate average daily sales over given period"""
@@ -1941,10 +2019,18 @@ class SalesRepository:
             month = driver.fetchone()
 
             return {
-                "today_revenue": Decimal(str(today["today_revenue"])) if today else Decimal("0"),
-                "today_profit": Decimal(str(today["today_profit"])) if today else Decimal("0"),
-                "month_revenue": Decimal(str(month["month_revenue"])) if month else Decimal("0"),
-                "month_profit": Decimal(str(month["month_profit"])) if month else Decimal("0"),
+                "today_revenue": (
+                    Decimal(str(today["today_revenue"])) if today else Decimal("0")
+                ),
+                "today_profit": (
+                    Decimal(str(today["today_profit"])) if today else Decimal("0")
+                ),
+                "month_revenue": (
+                    Decimal(str(month["month_revenue"])) if month else Decimal("0")
+                ),
+                "month_profit": (
+                    Decimal(str(month["month_profit"])) if month else Decimal("0")
+                ),
             }
 
     def get_inventory_health(self) -> List[Dict[str, Any]]:
@@ -2051,7 +2137,9 @@ class ProductRepository:
 
             if search:
                 search_term = f"%{search}%"
-                conditions.append("(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR supplier LIKE ?)")
+                conditions.append(
+                    "(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR supplier LIKE ?)"
+                )
                 params.extend([search_term] * 5)
 
             if category and category not in ("All Categories", ""):
@@ -2067,7 +2155,12 @@ class ProductRepository:
             return result["count"] if result else 0
 
     def get_all(
-        self, search: str = "", category: str = "", status: str = "", page: int = 1, page_size: int = None
+        self,
+        search: str = "",
+        category: str = "",
+        status: str = "",
+        page: int = 1,
+        page_size: int = None,
     ) -> List[Product]:
         """
         Get products with optional fuzzy search, filters, and pagination.
@@ -2097,7 +2190,9 @@ class ProductRepository:
             # Fuzzy search across multiple columns (uses indexes on individual columns)
             if search:
                 search_term = f"%{search}%"
-                conditions.append("(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR supplier LIKE ?)")
+                conditions.append(
+                    "(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR supplier LIKE ?)"
+                )
                 params.extend([search_term] * 5)
 
             # Category filter (uses idx_products_category)
@@ -2276,7 +2371,10 @@ class UserRepository:
 
             if row and bcrypt.checkpw(password.encode(), row["password_hash"].encode()):
                 # Update last login
-                driver.execute("UPDATE users SET last_login = ? WHERE username = ?", (datetime.now(), username))
+                driver.execute(
+                    "UPDATE users SET last_login = ? WHERE username = ?",
+                    (datetime.now(), username),
+                )
                 return User(
                     username=row["username"],
                     password_hash=row["password_hash"],
@@ -2286,7 +2384,9 @@ class UserRepository:
                 )
         return None
 
-    def create_user(self, username: str, password: str, role: UserRole, full_name: str = "") -> bool:
+    def create_user(
+        self, username: str, password: str, role: UserRole, full_name: str = ""
+    ) -> bool:
         """Create a new user with bcrypt-hashed password."""
         password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode()
         with self.db.get_connection() as driver:
@@ -2295,14 +2395,16 @@ class UserRepository:
                 (username, password_hash, role.value, full_name),
             )
             # Initialize user preferences
-            driver.execute("INSERT OR IGNORE INTO user_preferences (username) VALUES (?)", (username,))
+            driver.execute(
+                "INSERT OR IGNORE INTO user_preferences (username) VALUES (?)",
+                (username,),
+            )
             return True
 
     def get_all(self) -> List[User]:
         """Retrieve all users (Admin only)."""
         with self.db.get_connection() as driver:
-            driver.execute(
-                """
+            driver.execute("""
                 SELECT username,
                        password_hash,
                        role,
@@ -2311,8 +2413,7 @@ class UserRepository:
                        last_login
                 FROM users
                 ORDER BY created_at DESC
-                """
-            )
+                """)
             rows = driver.fetchall()
             return [
                 User(
@@ -2320,7 +2421,11 @@ class UserRepository:
                     password_hash=row["password_hash"],
                     role=UserRole(row["role"]),
                     full_name=row.get("full_name") or "",
-                    created_at=row.get("created_at") if row.get("created_at") else datetime.now(),
+                    created_at=(
+                        row.get("created_at")
+                        if row.get("created_at")
+                        else datetime.now()
+                    ),
                     last_login=row.get("last_login"),
                 )
                 for row in rows
@@ -2340,20 +2445,36 @@ class UserRepository:
                 )
         return None
 
-    def update_user(self, username: str, role: Optional[UserRole] = None, full_name: Optional[str] = None) -> bool:
+    def update_user(
+        self,
+        username: str,
+        role: Optional[UserRole] = None,
+        full_name: Optional[str] = None,
+    ) -> bool:
         """Update user details (Admin only)."""
         with self.db.get_connection() as driver:
             if role is not None:
-                driver.execute("UPDATE users SET role = ? WHERE username = ?", (role.value, username))
+                driver.execute(
+                    "UPDATE users SET role = ? WHERE username = ?",
+                    (role.value, username),
+                )
             if full_name is not None:
-                driver.execute("UPDATE users SET full_name = ? WHERE username = ?", (full_name, username))
+                driver.execute(
+                    "UPDATE users SET full_name = ? WHERE username = ?",
+                    (full_name, username),
+                )
             return True
 
     def update_password(self, username: str, new_password: str) -> bool:
         """Update user password with bcrypt hashing."""
-        password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt(12)).decode()
+        password_hash = bcrypt.hashpw(
+            new_password.encode(), bcrypt.gensalt(12)
+        ).decode()
         with self.db.get_connection() as driver:
-            driver.execute("UPDATE users SET password_hash = ? WHERE username = ?", (password_hash, username))
+            driver.execute(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
             return True
 
     def delete_user(self, username: str) -> bool:
@@ -2379,20 +2500,36 @@ class UserPreferencesRepository:
     def get(self, username: str) -> Dict[str, Any]:
         """Get user preferences."""
         with self.db.get_connection() as driver:
-            driver.execute("SELECT * FROM user_preferences WHERE username = ?", (username,))
+            driver.execute(
+                "SELECT * FROM user_preferences WHERE username = ?", (username,)
+            )
             row = driver.fetchone()
             if row:
                 return dict(row)
-            return {"theme": "dark", "language": "en", "dashboard_view": "default", "notifications_enabled": 1}
+            return {
+                "theme": "dark",
+                "language": "en",
+                "dashboard_view": "default",
+                "notifications_enabled": 1,
+            }
 
     def update(self, username: str, preferences: Dict[str, Any]) -> bool:
         """Update user preferences."""
         with self.db.get_connection() as driver:
             # Ensure record exists
-            driver.execute("INSERT OR IGNORE INTO user_preferences (username) VALUES (?)", (username,))
+            driver.execute(
+                "INSERT OR IGNORE INTO user_preferences (username) VALUES (?)",
+                (username,),
+            )
             # Update each preference
             for key, value in preferences.items():
-                if key in ("theme", "language", "dashboard_view", "last_category_filter", "last_status_filter"):
+                if key in (
+                    "theme",
+                    "language",
+                    "dashboard_view",
+                    "last_category_filter",
+                    "last_status_filter",
+                ):
                     driver.execute(
                         f"UPDATE user_preferences SET {key} = ?, updated_at = ? WHERE username = ?",
                         (value, datetime.now(), username),
@@ -2406,13 +2543,22 @@ class AuditRepository:
     def __init__(self, db: DatabaseManager):
         self.db = db
 
-    def log(self, action: str, entity_type: str, entity_id: str, details: str, user: str):
+    def log(
+        self, action: str, entity_type: str, entity_id: str, details: str, user: str
+    ):
         with self.db.get_connection() as driver:
             driver.execute(
                 "INSERT INTO audit_logs (action, entity_type, entity_id, details, user) VALUES (?, ?, ?, ?, ?)",
                 (action, entity_type, entity_id, details, user),
             )
-        logger.info("AUDIT | %s | %s:%s | %s | %s", action, entity_type, entity_id, user, details)
+        logger.info(
+            "AUDIT | %s | %s:%s | %s | %s",
+            action,
+            entity_type,
+            entity_id,
+            user,
+            details,
+        )
 
 
 # ==============================================================================
@@ -2425,18 +2571,35 @@ class UIComponents:
 
     @staticmethod
     def create_button(
-        parent, text: str, command: Callable, variant: str = "primary", width: int = None, icon: str = ""
+        parent,
+        text: str,
+        command: Callable,
+        variant: str = "primary",
+        width: int = None,
+        icon: str = "",
     ) -> tk.Button:
         """Create styled button with variants: primary, secondary, success, danger, ghost"""
         theme = Config.THEME
 
         styles = {
-            "primary": {"bg": theme["accent"], "fg": "white", "active_bg": theme["accent_hover"]},
-            "secondary": {"bg": theme["bg_tertiary"], "fg": theme["fg_primary"], "active_bg": theme["bg_secondary"]},
+            "primary": {
+                "bg": theme["accent"],
+                "fg": "white",
+                "active_bg": theme["accent_hover"],
+            },
+            "secondary": {
+                "bg": theme["bg_tertiary"],
+                "fg": theme["fg_primary"],
+                "active_bg": theme["bg_secondary"],
+            },
             "success": {"bg": theme["success"], "fg": "white", "active_bg": "#059669"},
             "danger": {"bg": theme["danger"], "fg": "white", "active_bg": "#dc2626"},
             "warning": {"bg": theme["warning"], "fg": "white", "active_bg": "#d97706"},
-            "ghost": {"bg": theme["bg_secondary"], "fg": theme["fg_secondary"], "active_bg": theme["bg_tertiary"]},
+            "ghost": {
+                "bg": theme["bg_secondary"],
+                "fg": theme["fg_secondary"],
+                "active_bg": theme["bg_tertiary"],
+            },
         }
 
         style = styles.get(variant, styles["primary"])
@@ -2469,7 +2632,11 @@ class UIComponents:
 
     @staticmethod
     def create_entry(
-        parent, textvariable: tk.StringVar = None, placeholder: str = "", width: int = 30, show: str = ""
+        parent,
+        textvariable: tk.StringVar = None,
+        placeholder: str = "",
+        width: int = 30,
+        show: str = "",
     ) -> tk.Entry:
         """Create styled entry field"""
         theme = Config.THEME
@@ -2512,7 +2679,9 @@ class UIComponents:
         return entry
 
     @staticmethod
-    def create_label(parent, text: str, size: int = 10, weight: str = "normal", color: str = None) -> tk.Label:
+    def create_label(
+        parent, text: str, size: int = 10, weight: str = "normal", color: str = None
+    ) -> tk.Label:
         """Create styled label"""
         theme = Config.THEME
 
@@ -2528,7 +2697,9 @@ class UIComponents:
         )
 
     @staticmethod
-    def create_stat_card(parent, title: str, value_var: tk.StringVar, color: str) -> tk.Frame:
+    def create_stat_card(
+        parent, title: str, value_var: tk.StringVar, color: str
+    ) -> tk.Frame:
         """Create dashboard statistic card with improved design"""
         theme = Config.THEME
 
@@ -2605,13 +2776,21 @@ class UIComponents:
         # Spinner animation (using Unicode)
         spinner_var = tk.StringVar(value="⏳")
         spinner_label = tk.Label(
-            frame, textvariable=spinner_var, font=("Segoe UI", 24), bg=theme["bg_secondary"], fg=theme["accent"]
+            frame,
+            textvariable=spinner_var,
+            font=("Segoe UI", 24),
+            bg=theme["bg_secondary"],
+            fg=theme["accent"],
         )
         spinner_label.pack()
 
-        tk.Label(frame, text=message, font=("Segoe UI", 10), bg=theme["bg_secondary"], fg=theme["fg_primary"]).pack(
-            pady=(8, 0)
-        )
+        tk.Label(
+            frame,
+            text=message,
+            font=("Segoe UI", 10),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_primary"],
+        ).pack(pady=(8, 0))
 
         # Animate spinner
         spinners = ["⏳", "⌛"]
@@ -2695,10 +2874,14 @@ class UIComponents:
         focus_border = theme["accent"]
 
         def on_focus_in(_e):
-            entry_frame.config(highlightbackground=focus_border, highlightcolor=focus_border)
+            entry_frame.config(
+                highlightbackground=focus_border, highlightcolor=focus_border
+            )
 
         def on_focus_out(_e):
-            entry_frame.config(highlightbackground=original_border, highlightcolor=original_border)
+            entry_frame.config(
+                highlightbackground=original_border, highlightcolor=original_border
+            )
 
         password_entry.bind("<FocusIn>", on_focus_in)
         password_entry.bind("<FocusOut>", on_focus_out)
@@ -2734,11 +2917,19 @@ class LoginView(tk.Frame):
 
         # Logo/Brand
         tk.Label(
-            container, text="INVENTORY", font=("Segoe UI Black", 32), bg=theme["bg_secondary"], fg=theme["accent"]
+            container,
+            text="INVENTORY",
+            font=("Segoe UI Black", 32),
+            bg=theme["bg_secondary"],
+            fg=theme["accent"],
         ).pack(pady=(0, 5))
 
         tk.Label(
-            container, text="SYSTEM", font=("Segoe UI Light", 18), bg=theme["bg_secondary"], fg=theme["fg_muted"]
+            container,
+            text="SYSTEM",
+            font=("Segoe UI Light", 18),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_muted"],
         ).pack()
 
         tk.Label(
@@ -2763,7 +2954,9 @@ class LoginView(tk.Frame):
         ).pack(fill="x", pady=(0, 5))
 
         self.username_var = tk.StringVar()
-        self.username_entry = UIComponents.create_entry(form, self.username_var, width=35)
+        self.username_entry = UIComponents.create_entry(
+            form, self.username_var, width=35
+        )
         self.username_entry.pack(fill="x", ipady=8, pady=(0, 16))
 
         tk.Label(
@@ -2776,12 +2969,16 @@ class LoginView(tk.Frame):
         ).pack(fill="x", pady=(0, 5))
 
         self.password_var = tk.StringVar()
-        password_field_container = UIComponents.create_password_field(form, self.password_var)
+        password_field_container = UIComponents.create_password_field(
+            form, self.password_var
+        )
         password_field_container.pack(fill="x", pady=(0, 24))
         self.password_entry = password_field_container.entry_widget
 
         # Login Button
-        login_btn = UIComponents.create_button(form, "Sign In", self._attempt_login, "primary")
+        login_btn = UIComponents.create_button(
+            form, "Sign In", self._attempt_login, "primary"
+        )
         login_btn.pack(fill="x", ipady=6)
 
         # Bind Enter key
@@ -2805,7 +3002,9 @@ class LoginView(tk.Frame):
         password = self.password_var.get()
 
         if not username or not password:
-            messagebox.showwarning("Validation Error", "Please enter both username and password.")
+            messagebox.showwarning(
+                "Validation Error", "Please enter both username and password."
+            )
             return
 
         user = self.user_repo.authenticate(username, password)
@@ -2815,7 +3014,9 @@ class LoginView(tk.Frame):
             self.on_login_success(user)
         else:
             logger.warning("Failed login attempt for user '%s'", username)
-            messagebox.showerror("Authentication Failed", "Invalid username or password.")
+            messagebox.showerror(
+                "Authentication Failed", "Invalid username or password."
+            )
             self.password_var.set("")
             self.password_entry.focus()
 
@@ -2883,9 +3084,13 @@ class UserManagementWindow(tk.Toplevel):
 
         if self.register_btn:
             if is_valid:
-                self.register_btn.config(state="normal", bg=Config.THEME["success"], cursor="hand2")
+                self.register_btn.config(
+                    state="normal", bg=Config.THEME["success"], cursor="hand2"
+                )
             else:
-                self.register_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.register_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
 
     def _is_form_valid(self) -> bool:
         """Check if all registration fields are valid."""
@@ -2928,7 +3133,11 @@ class UserManagementWindow(tk.Toplevel):
         ).pack(side="left", padx=20, pady=16)
 
         tk.Label(
-            header, text="Admin Panel", font=("Segoe UI", 10), bg=theme["bg_secondary"], fg=theme["fg_muted"]
+            header,
+            text="Admin Panel",
+            font=("Segoe UI", 10),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_muted"],
         ).pack(side="right", padx=20, pady=16)
 
         # Main content area
@@ -2953,7 +3162,12 @@ class UserManagementWindow(tk.Toplevel):
         # User list treeview
         columns = ("Username", "Full Name", "Role", "Last Login")
         self.user_tree = ttk.Treeview(
-            list_frame, columns=columns, show="headings", style="Custom.Treeview", selectmode="browse", height=12
+            list_frame,
+            columns=columns,
+            show="headings",
+            style="Custom.Treeview",
+            selectmode="browse",
+            height=12,
         )
 
         col_widths = {"Username": 100, "Full Name": 120, "Role": 80, "Last Login": 130}
@@ -2967,13 +3181,13 @@ class UserManagementWindow(tk.Toplevel):
         action_frame = tk.Frame(list_frame, bg=theme["bg_card"])
         action_frame.pack(fill="x", padx=16, pady=(0, 12))
 
-        UIComponents.create_button(action_frame, "Delete User", self._delete_selected_user, "danger").pack(
-            side="right", padx=(8, 0)
-        )
+        UIComponents.create_button(
+            action_frame, "Delete User", self._delete_selected_user, "danger"
+        ).pack(side="right", padx=(8, 0))
 
-        UIComponents.create_button(action_frame, "Refresh", self._refresh_user_list, "ghost", icon="🔄").pack(
-            side="right"
-        )
+        UIComponents.create_button(
+            action_frame, "Refresh", self._refresh_user_list, "ghost", icon="🔄"
+        ).pack(side="right")
 
         # === RIGHT: Register New User ===
         reg_frame = tk.Frame(content, bg=theme["bg_card"])
@@ -2992,15 +3206,29 @@ class UserManagementWindow(tk.Toplevel):
 
         # Username
         tk.Label(
-            form, text="Username *", font=("Segoe UI", 10), bg=theme["bg_card"], fg=theme["fg_secondary"], anchor="w"
+            form,
+            text="Username *",
+            font=("Segoe UI", 10),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
+            anchor="w",
         ).pack(fill="x", pady=(0, 4))
-        UIComponents.create_entry(form, self.new_username, width=30).pack(fill="x", pady=(0, 12))
+        UIComponents.create_entry(form, self.new_username, width=30).pack(
+            fill="x", pady=(0, 12)
+        )
 
         # Full Name
         tk.Label(
-            form, text="Full Name", font=("Segoe UI", 10), bg=theme["bg_card"], fg=theme["fg_secondary"], anchor="w"
+            form,
+            text="Full Name",
+            font=("Segoe UI", 10),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
+            anchor="w",
         ).pack(fill="x", pady=(0, 4))
-        UIComponents.create_entry(form, self.new_full_name, width=30).pack(fill="x", pady=(0, 12))
+        UIComponents.create_entry(form, self.new_full_name, width=30).pack(
+            fill="x", pady=(0, 12)
+        )
 
         # Password
         tk.Label(
@@ -3011,7 +3239,9 @@ class UserManagementWindow(tk.Toplevel):
             fg=theme["fg_secondary"],
             anchor="w",
         ).pack(fill="x", pady=(0, 4))
-        UIComponents.create_entry(form, self.new_password, width=30, show="●").pack(fill="x", pady=(0, 12))
+        UIComponents.create_entry(form, self.new_password, width=30, show="●").pack(
+            fill="x", pady=(0, 12)
+        )
 
         # Confirm Password
         tk.Label(
@@ -3022,17 +3252,28 @@ class UserManagementWindow(tk.Toplevel):
             fg=theme["fg_secondary"],
             anchor="w",
         ).pack(fill="x", pady=(0, 4))
-        UIComponents.create_entry(form, self.new_confirm_password, width=30, show="●").pack(fill="x", pady=(0, 12))
+        UIComponents.create_entry(
+            form, self.new_confirm_password, width=30, show="●"
+        ).pack(fill="x", pady=(0, 12))
 
         # Role
         tk.Label(
-            form, text="Role *", font=("Segoe UI", 10), bg=theme["bg_card"], fg=theme["fg_secondary"], anchor="w"
+            form,
+            text="Role *",
+            font=("Segoe UI", 10),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
+            anchor="w",
         ).pack(fill="x", pady=(0, 4))
 
         role_frame = tk.Frame(form, bg=theme["bg_card"])
         role_frame.pack(fill="x", pady=(0, 16))
 
-        for role_val, role_label in [("admin", "Admin"), ("manager", "Manager"), ("staff", "Staff")]:
+        for role_val, role_label in [
+            ("admin", "Admin"),
+            ("manager", "Manager"),
+            ("staff", "Staff"),
+        ]:
             tk.Radiobutton(
                 role_frame,
                 text=role_label,
@@ -3058,8 +3299,12 @@ class UserManagementWindow(tk.Toplevel):
         role_desc.pack(fill="x", pady=(0, 16))
 
         # Register button - disabled until form is valid (Genius feature)
-        self.register_btn = UIComponents.create_button(form, "Register User", self._register_user, "success")
-        self.register_btn.config(state="disabled", bg=theme["bg_tertiary"], cursor="arrow")
+        self.register_btn = UIComponents.create_button(
+            form, "Register User", self._register_user, "success"
+        )
+        self.register_btn.config(
+            state="disabled", bg=theme["bg_tertiary"], cursor="arrow"
+        )
         self.register_btn.pack(fill="x", pady=(8, 0))
 
         # Hint
@@ -3079,9 +3324,20 @@ class UserManagementWindow(tk.Toplevel):
 
         users = self.user_repo.get_all()
         for user in users:
-            last_login = user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else "Never"
+            last_login = (
+                user.last_login.strftime("%Y-%m-%d %H:%M")
+                if user.last_login
+                else "Never"
+            )
             self.user_tree.insert(
-                "", "end", values=(user.username, user.full_name or "-", user.role.value.title(), last_login)
+                "",
+                "end",
+                values=(
+                    user.username,
+                    user.full_name or "-",
+                    user.role.value.title(),
+                    last_login,
+                ),
             )
 
     def _register_user(self):
@@ -3093,7 +3349,9 @@ class UserManagementWindow(tk.Toplevel):
 
         # Check if username exists
         if self.user_repo.username_exists(username):
-            messagebox.showerror("Registration Failed", f"Username '{username}' already exists.")
+            messagebox.showerror(
+                "Registration Failed", f"Username '{username}' already exists."
+            )
             return
 
         try:
@@ -3105,7 +3363,9 @@ class UserManagementWindow(tk.Toplevel):
                 f"Created user '{username}' with role '{role.value}'",
                 self.admin_user.username,
             )
-            messagebox.showinfo("Success", f"User '{username}' registered successfully!")
+            messagebox.showinfo(
+                "Success", f"User '{username}' registered successfully!"
+            )
 
             # Clear form
             self.new_username.set("")
@@ -3124,7 +3384,9 @@ class UserManagementWindow(tk.Toplevel):
         """Delete the selected user."""
         selection = self.user_tree.selection()
         if not selection:
-            messagebox.showwarning("Selection Required", "Please select a user to delete.")
+            messagebox.showwarning(
+                "Selection Required", "Please select a user to delete."
+            )
             return
 
         item = self.user_tree.item(selection[0])
@@ -3137,17 +3399,26 @@ class UserManagementWindow(tk.Toplevel):
 
         # Cannot delete default admin
         if username == "admin":
-            messagebox.showerror("Cannot Delete", "The default 'admin' account cannot be deleted.")
+            messagebox.showerror(
+                "Cannot Delete", "The default 'admin' account cannot be deleted."
+            )
             return
 
         if not messagebox.askyesno(
-            "Confirm Delete", f"Permanently delete user '{username}'?\n\nThis action cannot be undone."
+            "Confirm Delete",
+            f"Permanently delete user '{username}'?\n\nThis action cannot be undone.",
         ):
             return
 
         try:
             self.user_repo.delete_user(username)
-            self.audit_repo.log("DELETE_USER", "user", username, f"Deleted user '{username}'", self.admin_user.username)
+            self.audit_repo.log(
+                "DELETE_USER",
+                "user",
+                username,
+                f"Deleted user '{username}'",
+                self.admin_user.username,
+            )
             messagebox.showinfo("Success", f"User '{username}' deleted.")
             self._refresh_user_list()
 
@@ -3170,7 +3441,11 @@ class SalesWindow(tk.Toplevel):
     """
 
     def __init__(
-        self, master, user: User, product: Optional[Product] = None, on_sale_complete: Callable[[], None] = None
+        self,
+        master,
+        user: User,
+        product: Optional[Product] = None,
+        on_sale_complete: Callable[[], None] = None,
     ):
         super().__init__(master)
         self.user = user
@@ -3206,8 +3481,12 @@ class SalesWindow(tk.Toplevel):
         # Form variables
         self.sku_var = tk.StringVar(value=product.sku if product else "")
         self.product_name_var = tk.StringVar(value=product.name if product else "")
-        self.available_qty_var = tk.StringVar(value=str(product.quantity) if product else "0")
-        self.unit_price_var = tk.StringVar(value=str(product.price) if product else "0.00")
+        self.available_qty_var = tk.StringVar(
+            value=str(product.quantity) if product else "0"
+        )
+        self.unit_price_var = tk.StringVar(
+            value=str(product.price) if product else "0.00"
+        )
         self.sale_qty_var = tk.StringVar(value="1")
         self.total_var = tk.StringVar(value="₱0.00")
         self.profit_var = tk.StringVar(value="₱0.00")
@@ -3237,7 +3516,11 @@ class SalesWindow(tk.Toplevel):
         ).pack(side="left", padx=20, pady=16)
 
         tk.Label(
-            header, text="POS Terminal", font=("Segoe UI", 10), bg=theme["bg_secondary"], fg=theme["fg_muted"]
+            header,
+            text="POS Terminal",
+            font=("Segoe UI", 10),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_muted"],
         ).pack(side="right", padx=20, pady=16)
 
         # Main content
@@ -3274,9 +3557,13 @@ class SalesWindow(tk.Toplevel):
         sku_entry.bind("<Return>", lambda e: self._lookup_product())
 
         # Product info (read-only)
-        tk.Label(inner, text="Product Name:", font=("Segoe UI", 9), bg=theme["bg_card"], fg=theme["fg_secondary"]).pack(
-            anchor="w"
-        )
+        tk.Label(
+            inner,
+            text="Product Name:",
+            font=("Segoe UI", 9),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
+        ).pack(anchor="w")
         name_entry = UIComponents.create_entry(inner, self.product_name_var, width=30)
         name_entry.pack(fill="x", pady=(2, 8))
         name_entry.config(state="readonly")
@@ -3285,9 +3572,13 @@ class SalesWindow(tk.Toplevel):
         info_row = tk.Frame(inner, bg=theme["bg_card"])
         info_row.pack(fill="x", pady=(0, 4))
 
-        tk.Label(info_row, text="Available:", font=("Segoe UI", 9), bg=theme["bg_card"], fg=theme["fg_secondary"]).pack(
-            side="left"
-        )
+        tk.Label(
+            info_row,
+            text="Available:",
+            font=("Segoe UI", 9),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
+        ).pack(side="left")
         tk.Label(
             info_row,
             textvariable=self.available_qty_var,
@@ -3297,7 +3588,11 @@ class SalesWindow(tk.Toplevel):
         ).pack(side="left", padx=(4, 20))
 
         tk.Label(
-            info_row, text="Unit Price: ₱", font=("Segoe UI", 9), bg=theme["bg_card"], fg=theme["fg_secondary"]
+            info_row,
+            text="Unit Price: ₱",
+            font=("Segoe UI", 9),
+            bg=theme["bg_card"],
+            fg=theme["fg_secondary"],
         ).pack(side="left")
         tk.Label(
             info_row,
@@ -3327,7 +3622,11 @@ class SalesWindow(tk.Toplevel):
         qty_row.pack(fill="x", pady=(0, 8))
 
         tk.Label(
-            qty_row, text="Quantity to Sell:", font=("Segoe UI", 10), bg=theme["bg_card"], fg=theme["fg_primary"]
+            qty_row,
+            text="Quantity to Sell:",
+            font=("Segoe UI", 10),
+            bg=theme["bg_card"],
+            fg=theme["fg_primary"],
         ).pack(side="left")
 
         qty_entry = UIComponents.create_entry(qty_row, self.sale_qty_var, width=10)
@@ -3338,7 +3637,11 @@ class SalesWindow(tk.Toplevel):
         payment_row.pack(fill="x", pady=(0, 8))
 
         tk.Label(
-            payment_row, text="Payment Method:", font=("Segoe UI", 10), bg=theme["bg_card"], fg=theme["fg_primary"]
+            payment_row,
+            text="Payment Method:",
+            font=("Segoe UI", 10),
+            bg=theme["bg_card"],
+            fg=theme["fg_primary"],
         ).pack(side="left")
 
         for method, label in [("cash", "Cash"), ("card", "Card"), ("credit", "Credit")]:
@@ -3362,7 +3665,9 @@ class SalesWindow(tk.Toplevel):
             bg=theme["bg_card"],
             fg=theme["fg_secondary"],
         ).pack(anchor="w")
-        UIComponents.create_entry(sale_inner, self.customer_ref_var, width=30).pack(fill="x", pady=(2, 0))
+        UIComponents.create_entry(sale_inner, self.customer_ref_var, width=30).pack(
+            fill="x", pady=(2, 0)
+        )
 
         # Totals
         totals_frame = tk.Frame(content, bg=theme["bg_tertiary"])
@@ -3372,7 +3677,11 @@ class SalesWindow(tk.Toplevel):
         totals_inner.pack(fill="x", padx=16)
 
         tk.Label(
-            totals_inner, text="TOTAL:", font=("Segoe UI Semibold", 14), bg=theme["bg_tertiary"], fg=theme["fg_primary"]
+            totals_inner,
+            text="TOTAL:",
+            font=("Segoe UI Semibold", 14),
+            bg=theme["bg_tertiary"],
+            fg=theme["fg_primary"],
         ).pack(side="left")
         tk.Label(
             totals_inner,
@@ -3383,7 +3692,11 @@ class SalesWindow(tk.Toplevel):
         ).pack(side="left", padx=(8, 0))
 
         tk.Label(
-            totals_inner, text="Profit:", font=("Segoe UI", 10), bg=theme["bg_tertiary"], fg=theme["fg_muted"]
+            totals_inner,
+            text="Profit:",
+            font=("Segoe UI", 10),
+            bg=theme["bg_tertiary"],
+            fg=theme["fg_muted"],
         ).pack(side="right")
         tk.Label(
             totals_inner,
@@ -3397,9 +3710,13 @@ class SalesWindow(tk.Toplevel):
         btn_frame = tk.Frame(content, bg=theme["bg_primary"])
         btn_frame.pack(fill="x")
 
-        UIComponents.create_button(btn_frame, "Cancel", self.destroy, "ghost").pack(side="left")
+        UIComponents.create_button(btn_frame, "Cancel", self.destroy, "ghost").pack(
+            side="left"
+        )
 
-        self.confirm_btn = UIComponents.create_button(btn_frame, "Confirm Sale", self._confirm_sale, "success")
+        self.confirm_btn = UIComponents.create_button(
+            btn_frame, "Confirm Sale", self._confirm_sale, "success"
+        )
         self.confirm_btn.pack(side="right")
 
     def _bind_events(self):
@@ -3579,32 +3896,50 @@ class DashboardView(tk.Frame):
         # RBAC: Staff users cannot modify inventory
         if not self.can_modify:
             if self.save_btn:
-                self.save_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.save_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
             if self.update_btn:
-                self.update_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.update_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
             if self.delete_btn:
-                self.delete_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.delete_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
             return
 
         # Update Save button state
         if self.save_btn:
             if is_valid:
-                self.save_btn.config(state="normal", bg=Config.THEME["success"], cursor="hand2")
+                self.save_btn.config(
+                    state="normal", bg=Config.THEME["success"], cursor="hand2"
+                )
             else:
-                self.save_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.save_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
 
         # Update Update/Delete button states
         if self.update_btn:
             if is_valid and has_selection:
-                self.update_btn.config(state="normal", bg=Config.THEME["accent"], cursor="hand2")
+                self.update_btn.config(
+                    state="normal", bg=Config.THEME["accent"], cursor="hand2"
+                )
             else:
-                self.update_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.update_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
 
         if self.delete_btn:
             if has_selection:
-                self.delete_btn.config(state="normal", bg=Config.THEME["danger"], cursor="hand2")
+                self.delete_btn.config(
+                    state="normal", bg=Config.THEME["danger"], cursor="hand2"
+                )
             else:
-                self.delete_btn.config(state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow")
+                self.delete_btn.config(
+                    state="disabled", bg=Config.THEME["bg_tertiary"], cursor="arrow"
+                )
 
     def _is_form_valid(self) -> bool:
         """Check if all required form fields are valid."""
@@ -3681,10 +4016,18 @@ class DashboardView(tk.Frame):
         brand_frame.pack(fill="x", pady=30)
 
         tk.Label(
-            brand_frame, text="INVENTORY", font=("Segoe UI Black", 20), bg=theme["bg_secondary"], fg=theme["accent"]
+            brand_frame,
+            text="INVENTORY",
+            font=("Segoe UI Black", 20),
+            bg=theme["bg_secondary"],
+            fg=theme["accent"],
         ).pack()
         tk.Label(
-            brand_frame, text="SYSTEM", font=("Segoe UI Light", 12), bg=theme["bg_secondary"], fg=theme["fg_muted"]
+            brand_frame,
+            text="SYSTEM",
+            font=("Segoe UI Light", 12),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_muted"],
         ).pack()
 
         # Image preview
@@ -3693,7 +4036,11 @@ class DashboardView(tk.Frame):
         img_frame.pack_propagate(False)
 
         self.img_label = tk.Label(
-            img_frame, text="NO IMAGE", font=("Segoe UI", 10), bg=theme["bg_tertiary"], fg=theme["fg_muted"]
+            img_frame,
+            text="NO IMAGE",
+            font=("Segoe UI", 10),
+            bg=theme["bg_tertiary"],
+            fg=theme["fg_muted"],
         )
         self.img_label.pack(fill="both", expand=True)
 
@@ -3701,34 +4048,44 @@ class DashboardView(tk.Frame):
         btn_frame = tk.Frame(sidebar, bg=theme["bg_secondary"])
         btn_frame.pack(fill="x", padx=20, pady=10)
 
-        UIComponents.create_button(btn_frame, "Upload Image", self._upload_image, "secondary", icon="📷").pack(
-            fill="x", pady=4
-        )
+        UIComponents.create_button(
+            btn_frame, "Upload Image", self._upload_image, "secondary", icon="📷"
+        ).pack(fill="x", pady=4)
 
         # Export button: keep reference to enable/disable during long-running export
-        self.export_btn = UIComponents.create_button(btn_frame, "Export to CSV", self._export_csv, "warning", icon="📊")
+        self.export_btn = UIComponents.create_button(
+            btn_frame, "Export to CSV", self._export_csv, "warning", icon="📊"
+        )
         self.export_btn.pack(fill="x", pady=4)
 
         # Manager/Admin: Record Sale (POS)
         if self.can_modify:
-            UIComponents.create_button(btn_frame, "Record Sale", self._open_sales_window, "success", icon="💰").pack(
-                fill="x", pady=4
-            )
+            UIComponents.create_button(
+                btn_frame, "Record Sale", self._open_sales_window, "success", icon="💰"
+            ).pack(fill="x", pady=4)
 
-        UIComponents.create_button(btn_frame, "Generate Report", self._generate_report, "secondary", icon="📋").pack(
-            fill="x", pady=4
-        )
+        UIComponents.create_button(
+            btn_frame, "Generate Report", self._generate_report, "secondary", icon="📋"
+        ).pack(fill="x", pady=4)
 
         # Admin-only: User Management
         if self.is_admin:
             UIComponents.create_button(
-                btn_frame, "Manage Users", self._open_user_management, "primary", icon="👥"
+                btn_frame,
+                "Manage Users",
+                self._open_user_management,
+                "primary",
+                icon="👥",
             ).pack(fill="x", pady=4)
 
         # RBAC indicator for Staff
         if not self.can_modify:
             rbac_label = tk.Label(
-                btn_frame, text="⚠️ View-Only Mode", font=("Segoe UI", 9), bg=theme["bg_secondary"], fg=theme["warning"]
+                btn_frame,
+                text="⚠️ View-Only Mode",
+                font=("Segoe UI", 9),
+                bg=theme["bg_secondary"],
+                fg=theme["warning"],
             )
             rbac_label.pack(fill="x", pady=(8, 0))
 
@@ -3755,9 +4112,9 @@ class DashboardView(tk.Frame):
             fg=theme["fg_muted"],
         ).pack(anchor="w")
 
-        UIComponents.create_button(user_frame, "Sign Out", self._handle_logout, "danger").pack(
-            fill="x", padx=16, pady=(0, 16)
-        )
+        UIComponents.create_button(
+            user_frame, "Sign Out", self._handle_logout, "danger"
+        ).pack(fill="x", padx=16, pady=(0, 16))
 
         # Collapsible toggle button (top-left of window)
         def _toggle():
@@ -3812,18 +4169,29 @@ class DashboardView(tk.Frame):
         category_combo.bind("<<ComboboxSelected>>", lambda *_: self._filter_products())
 
         # Fuzzy search bar
-        search_frame = tk.Frame(search_container, bg=theme["bg_secondary"], padx=12, pady=8)
+        search_frame = tk.Frame(
+            search_container, bg=theme["bg_secondary"], padx=12, pady=8
+        )
         search_frame.pack(side="right")
 
-        tk.Label(search_frame, text="🔍", font=("Segoe UI", 12), bg=theme["bg_secondary"], fg=theme["fg_muted"]).pack(
-            side="left", padx=(0, 8)
-        )
+        tk.Label(
+            search_frame,
+            text="🔍",
+            font=("Segoe UI", 12),
+            bg=theme["bg_secondary"],
+            fg=theme["fg_muted"],
+        ).pack(side="left", padx=(0, 8))
 
         search_entry = UIComponents.create_entry(
-            search_frame, self.search_var, placeholder="Smart search (SKU, Name, Brand, Supplier)...", width=32
+            search_frame,
+            self.search_var,
+            placeholder="Smart search (SKU, Name, Brand, Supplier)...",
+            width=32,
         )
         search_entry.pack(side="left")
-        search_entry.config(relief="flat", highlightthickness=0, bg=theme["bg_secondary"])
+        search_entry.config(
+            relief="flat", highlightthickness=0, bg=theme["bg_secondary"]
+        )
 
         self.search_var.trace_add("write", lambda *_: self._filter_products())
 
@@ -3857,7 +4225,9 @@ class DashboardView(tk.Frame):
         content.grid_rowconfigure(0, weight=1)
 
         # Use PanedWindow to allow user resizing between table and form
-        pw = tk.PanedWindow(content, orient=tk.HORIZONTAL, sashrelief="raised", bg=theme["bg_primary"])
+        pw = tk.PanedWindow(
+            content, orient=tk.HORIZONTAL, sashrelief="raised", bg=theme["bg_primary"]
+        )
         pw.grid(row=0, column=0, sticky="nsew")
 
         # Left: Table frame (expands more)
@@ -3880,7 +4250,9 @@ class DashboardView(tk.Frame):
             fg=theme["fg_primary"],
         ).pack(side="left")
 
-        UIComponents.create_button(table_header, "Refresh", self._refresh_data, "ghost", icon="🔄").pack(side="right")
+        UIComponents.create_button(
+            table_header, "Refresh", self._refresh_data, "ghost", icon="🔄"
+        ).pack(side="right")
 
         # Treeview with custom style
         style = ttk.Style()
@@ -3903,12 +4275,28 @@ class DashboardView(tk.Frame):
             relief="flat",
         )
         style.map("Custom.Treeview", background=[("selected", theme["accent"])])
-        style.map("Custom.Treeview.Heading", background=[("active", theme["bg_tertiary"])])
+        style.map(
+            "Custom.Treeview.Heading", background=[("active", theme["bg_tertiary"])]
+        )
 
         # Treeview
-        columns = ("SKU", "Product Name", "Brand", "Supplier", "Price", "Qty", "Category", "Status", "Health")
+        columns = (
+            "SKU",
+            "Product Name",
+            "Brand",
+            "Supplier",
+            "Price",
+            "Qty",
+            "Category",
+            "Status",
+            "Health",
+        )
         self.tree = ttk.Treeview(
-            table_container, columns=columns, show="headings", style="Custom.Treeview", selectmode="browse"
+            table_container,
+            columns=columns,
+            show="headings",
+            style="Custom.Treeview",
+            selectmode="browse",
         )
 
         col_widths = {
@@ -3938,17 +4326,24 @@ class DashboardView(tk.Frame):
         self.tree.tag_configure("critical", background="#3d1d1f")  # Soft red background
         self.tree.tag_configure("low", background="#3a2c1a")  # Soft orange background
         self.tree.tag_configure("aging", background="#2d1f3a")  # Soft purple background
-        self.tree.tag_configure("low_margin", background="#3a2a1f")  # Soft brown background
-        self.tree.tag_configure("healthy", background="#1f3a2a")  # Soft green background
+        self.tree.tag_configure(
+            "low_margin", background="#3a2a1f"
+        )  # Soft brown background
+        self.tree.tag_configure(
+            "healthy", background="#1f3a2a"
+        )  # Soft green background
         self.tree.tag_configure("normal", background=theme["bg_card"])
         self.tree.tag_configure("stripe", background=theme["table_stripe"])
 
-
         # Scrollbar
-        scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
+        scrollbar = ttk.Scrollbar(
+            table_container, orient="vertical", command=self.tree.yview
+        )
         self.tree.configure(yscrollcommand=scrollbar.set)
 
-        self.tree.pack(side="left", fill="both", expand=True, padx=(12, 0), pady=(0, 12))
+        self.tree.pack(
+            side="left", fill="both", expand=True, padx=(12, 0), pady=(0, 12)
+        )
         scrollbar.pack(side="right", fill="y", pady=(0, 12), padx=(0, 8))
 
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
@@ -3973,28 +4368,44 @@ class DashboardView(tk.Frame):
         header.pack(fill="x", padx=12, pady=6)
 
         tk.Label(
-            header, text="Product Details", font=("Segoe UI Semibold", 12), bg=theme["bg_card"], fg=theme["fg_primary"]
+            header,
+            text="Product Details",
+            font=("Segoe UI Semibold", 12),
+            bg=theme["bg_card"],
+            fg=theme["fg_primary"],
         ).pack(side="left")
 
-        UIComponents.create_button(header, "Clear", self._clear_form, "ghost").pack(side="right")
+        UIComponents.create_button(header, "Clear", self._clear_form, "ghost").pack(
+            side="right"
+        )
 
         # Action buttons FIRST (pack at bottom before fields)
         btn_frame = tk.Frame(form_container, bg=theme["bg_card"])
         btn_frame.pack(fill="x", padx=12, pady=8, side="bottom")
 
         # Save button - disabled by default until form is valid
-        self.save_btn = UIComponents.create_button(btn_frame, "Save New", self._save_product, "success")
+        self.save_btn = UIComponents.create_button(
+            btn_frame, "Save New", self._save_product, "success"
+        )
         self.save_btn.config(state="disabled", bg=theme["bg_tertiary"], cursor="arrow")
         self.save_btn.pack(fill="x", pady=1)
 
         # Update button - disabled until selection + valid form
-        self.update_btn = UIComponents.create_button(btn_frame, "Update", self._update_product, "primary")
-        self.update_btn.config(state="disabled", bg=theme["bg_tertiary"], cursor="arrow")
+        self.update_btn = UIComponents.create_button(
+            btn_frame, "Update", self._update_product, "primary"
+        )
+        self.update_btn.config(
+            state="disabled", bg=theme["bg_tertiary"], cursor="arrow"
+        )
         self.update_btn.pack(fill="x", pady=1)
 
         # Delete button - disabled until selection
-        self.delete_btn = UIComponents.create_button(btn_frame, "Delete", self._delete_product, "danger")
-        self.delete_btn.config(state="disabled", bg=theme["bg_tertiary"], cursor="arrow")
+        self.delete_btn = UIComponents.create_button(
+            btn_frame, "Delete", self._delete_product, "danger"
+        )
+        self.delete_btn.config(
+            state="disabled", bg=theme["bg_tertiary"], cursor="arrow"
+        )
         self.delete_btn.pack(fill="x", pady=1)
 
         # Form fields (pack after buttons so they fill remaining space)
@@ -4014,23 +4425,29 @@ class DashboardView(tk.Frame):
         ]
 
         for label_text, key, is_dropdown in fields:
-            tk.Label(form, text=label_text, font=("Segoe UI", 8), bg=theme["bg_card"], fg=theme["fg_secondary"]).pack(
-                anchor="w", pady=(2, 1)
-            )
+            tk.Label(
+                form,
+                text=label_text,
+                font=("Segoe UI", 8),
+                bg=theme["bg_card"],
+                fg=theme["fg_secondary"],
+            ).pack(anchor="w", pady=(2, 1))
 
             if key == "sku":
                 sku_frame = tk.Frame(form, bg=theme["bg_card"])
                 sku_frame.pack(fill="x")
 
-                entry = UIComponents.create_entry(sku_frame, self.form_vars[key], width=20)
+                entry = UIComponents.create_entry(
+                    sku_frame, self.form_vars[key], width=20
+                )
                 entry.pack(side="left", fill="x", expand=True, ipady=2)
 
                 # Bind barcode scanner detection
                 entry.bind("<Key>", self.barcode_listener.on_key)
 
-                UIComponents.create_button(sku_frame, "GEN", self._generate_sku, "secondary").pack(
-                    side="right", padx=(6, 0)
-                )
+                UIComponents.create_button(
+                    sku_frame, "GEN", self._generate_sku, "secondary"
+                ).pack(side="right", padx=(6, 0))
 
             elif is_dropdown:
                 combo = ttk.Combobox(
@@ -4055,7 +4472,9 @@ class DashboardView(tk.Frame):
 
         # Load products with multi-criteria filtering
         products = self.product_repo.get_all(
-            search=self.search_var.get(), category=self.filter_category.get(), status=self.filter_status.get()
+            search=self.search_var.get(),
+            category=self.filter_category.get(),
+            status=self.filter_status.get(),
         )
 
         for i, product in enumerate(products):
@@ -4088,7 +4507,11 @@ class DashboardView(tk.Frame):
                 tag = "low_margin"
 
             # Truncate supplier for display (unique identifier)
-            supplier_display = (product.supplier[:12] + "…") if len(product.supplier) > 13 else product.supplier
+            supplier_display = (
+                (product.supplier[:12] + "…")
+                if len(product.supplier) > 13
+                else product.supplier
+            )
 
             self.tree.insert(
                 "",
@@ -4109,7 +4532,9 @@ class DashboardView(tk.Frame):
 
         # Calculate health metrics
         aging_count = sum(1 for p in products if p.is_aging)
-        margins = [float(p.profit_margin) for p in products if p.profit_margin is not None]
+        margins = [
+            float(p.profit_margin) for p in products if p.profit_margin is not None
+        ]
         avg_margin = sum(margins) / len(margins) if margins else 0.0
 
         # Update statistics
@@ -4138,12 +4563,17 @@ class DashboardView(tk.Frame):
             col: Column name to sort by. Numeric columns (Price, Qty)
                  are sorted numerically; others alphabetically.
         """
-        data = [(self.tree.set(child, col), child) for child in self.tree.get_children("")]
+        data = [
+            (self.tree.set(child, col), child) for child in self.tree.get_children("")
+        ]
 
         try:
             if col in ["Price", "Qty"]:
                 data.sort(
-                    key=lambda x: float(x[0].replace("₱", "").replace(",", "").replace("-", "0") or 0), reverse=True
+                    key=lambda x: float(
+                        x[0].replace("₱", "").replace(",", "").replace("-", "0") or 0
+                    ),
+                    reverse=True,
                 )
             else:
                 data.sort(key=lambda x: str(x[0]).lower())
@@ -4226,7 +4656,9 @@ class DashboardView(tk.Frame):
             if price < 0:
                 raise ValueError("Negative price")
         except (InvalidOperation, ValueError):
-            messagebox.showwarning("Validation Error", "Please enter a valid price (positive number).")
+            messagebox.showwarning(
+                "Validation Error", "Please enter a valid price (positive number)."
+            )
             return None
 
         try:
@@ -4234,7 +4666,9 @@ class DashboardView(tk.Frame):
             if quantity < 0:
                 raise ValueError("Negative quantity")
         except ValueError:
-            messagebox.showwarning("Validation Error", "Please enter a valid quantity (whole number ≥ 0).")
+            messagebox.showwarning(
+                "Validation Error", "Please enter a valid quantity (whole number ≥ 0)."
+            )
             return None
 
         try:
@@ -4277,9 +4711,15 @@ class DashboardView(tk.Frame):
         try:
             self.product_repo.save(product)
             self.audit_repo.log(
-                "CREATE", "product", product.sku, f"Created product: {product.name}", self.user.username
+                "CREATE",
+                "product",
+                product.sku,
+                f"Created product: {product.name}",
+                self.user.username,
             )
-            messagebox.showinfo("Success", f"Product '{product.name}' saved successfully.")
+            messagebox.showinfo(
+                "Success", f"Product '{product.name}' saved successfully."
+            )
             self._clear_form()
             self._refresh_data()
         except Exception as e:
@@ -4293,18 +4733,28 @@ class DashboardView(tk.Frame):
             return
 
         if not self.product_repo.get_by_sku(product.sku):
-            messagebox.showerror("Error", f"Product with SKU '{product.sku}' not found.")
+            messagebox.showerror(
+                "Error", f"Product with SKU '{product.sku}' not found."
+            )
             return
 
-        if not messagebox.askyesno("Confirm Update", f"Update product '{product.name}'?"):
+        if not messagebox.askyesno(
+            "Confirm Update", f"Update product '{product.name}'?"
+        ):
             return
 
         try:
             self.product_repo.update(product)
             self.audit_repo.log(
-                "UPDATE", "product", product.sku, f"Updated product: {product.name}", self.user.username
+                "UPDATE",
+                "product",
+                product.sku,
+                f"Updated product: {product.name}",
+                self.user.username,
             )
-            messagebox.showinfo("Success", f"Product '{product.name}' updated successfully.")
+            messagebox.showinfo(
+                "Success", f"Product '{product.name}' updated successfully."
+            )
             self._refresh_data()
         except Exception as e:
             logger.error("Failed to update product: %s", e)
@@ -4315,7 +4765,9 @@ class DashboardView(tk.Frame):
         sku = self.form_vars["sku"].get().strip()
 
         if not sku:
-            messagebox.showwarning("Selection Required", "Please select a product to delete.")
+            messagebox.showwarning(
+                "Selection Required", "Please select a product to delete."
+            )
             return
 
         product = self.product_repo.get_by_sku(sku)
@@ -4324,13 +4776,20 @@ class DashboardView(tk.Frame):
             return
 
         if not messagebox.askyesno(
-            "Confirm Delete", f"Permanently delete '{product.name}'?\n\nThis action cannot be undone."
+            "Confirm Delete",
+            f"Permanently delete '{product.name}'?\n\nThis action cannot be undone.",
         ):
             return
 
         try:
             self.product_repo.delete(sku)
-            self.audit_repo.log("DELETE", "product", sku, f"Deleted product: {product.name}", self.user.username)
+            self.audit_repo.log(
+                "DELETE",
+                "product",
+                sku,
+                f"Deleted product: {product.name}",
+                self.user.username,
+            )
             messagebox.showinfo("Success", f"Product '{product.name}' deleted.")
             self._clear_form()
             self._refresh_data()
@@ -4439,7 +4898,8 @@ class DashboardView(tk.Frame):
             # New barcode - populate SKU field for new entry
             self.form_vars["sku"].set(barcode)
             messagebox.showinfo(
-                "New Product", f"SKU '{barcode}' not found.\n\nThe SKU field has been populated for new product entry."
+                "New Product",
+                f"SKU '{barcode}' not found.\n\nThe SKU field has been populated for new product entry.",
             )
 
     def _show_barcode_quick_view(self, product: Product):
@@ -4495,9 +4955,13 @@ class DashboardView(tk.Frame):
                 bg=theme["bg_card"],
                 fg=theme["fg_muted"],
             ).pack(side="left")
-            tk.Label(row, text=value, font=("Segoe UI Semibold", 10), bg=theme["bg_card"], fg=theme["fg_primary"]).pack(
-                side="left"
-            )
+            tk.Label(
+                row,
+                text=value,
+                font=("Segoe UI Semibold", 10),
+                bg=theme["bg_card"],
+                fg=theme["fg_primary"],
+            ).pack(side="left")
 
         # Action buttons
         btn_frame = tk.Frame(popup, bg=theme["bg_card"])
@@ -4512,14 +4976,22 @@ class DashboardView(tk.Frame):
             if self.can_modify:
                 self._open_sales_window(product)
             else:
-                messagebox.showwarning("Access Denied", "Sales recording requires Manager or Admin role.")
+                messagebox.showwarning(
+                    "Access Denied", "Sales recording requires Manager or Admin role."
+                )
 
-        UIComponents.create_button(btn_frame, "View Details", view_product, "primary").pack(side="left", padx=(0, 8))
+        UIComponents.create_button(
+            btn_frame, "View Details", view_product, "primary"
+        ).pack(side="left", padx=(0, 8))
 
         if self.can_modify:
-            UIComponents.create_button(btn_frame, "Sell", sell_product, "success").pack(side="left", padx=(0, 8))
+            UIComponents.create_button(btn_frame, "Sell", sell_product, "success").pack(
+                side="left", padx=(0, 8)
+            )
 
-        UIComponents.create_button(btn_frame, "Close", popup.destroy, "ghost").pack(side="right")
+        UIComponents.create_button(btn_frame, "Close", popup.destroy, "ghost").pack(
+            side="right"
+        )
 
     def _select_product_by_sku(self, sku: str):
         """Select a product in the table by SKU."""
@@ -4535,11 +5007,14 @@ class DashboardView(tk.Frame):
         """Upload product image"""
         sku = self.form_vars["sku"].get().strip()
         if not sku:
-            messagebox.showwarning("SKU Required", "Please enter or generate a SKU first.")
+            messagebox.showwarning(
+                "SKU Required", "Please enter or generate a SKU first."
+            )
             return
 
         file_path = filedialog.askopenfilename(
-            title="Select Product Image", filetypes=[("Image Files", "*.jpg *.jpeg *.png *.webp")]
+            title="Select Product Image",
+            filetypes=[("Image Files", "*.jpg *.jpeg *.png *.webp")],
         )
 
         if not file_path:
@@ -4548,7 +5023,9 @@ class DashboardView(tk.Frame):
         # Validate file size
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         if file_size_mb > Config.MAX_IMAGE_SIZE_MB:
-            messagebox.showerror("Error", f"Image size exceeds {Config.MAX_IMAGE_SIZE_MB}MB limit.")
+            messagebox.showerror(
+                "Error", f"Image size exceeds {Config.MAX_IMAGE_SIZE_MB}MB limit."
+            )
             return
 
         # Copy to assets folder
@@ -4588,11 +5065,22 @@ class DashboardView(tk.Frame):
                 # Load and cache new image with optimized memory usage
                 with Image.open(path) as img:
                     # Resize image to fit current sidebar image frame; adaptively scale
-                    target_w = getattr(self, 'img_label', None) and getattr(self.img_label, 'winfo_width', lambda: 200)() or 200
-                    target_h = getattr(self, 'img_label', None) and getattr(self.img_label, 'winfo_height', lambda: 160)() or 160
+                    target_w = (
+                        getattr(self, "img_label", None)
+                        and getattr(self.img_label, "winfo_width", lambda: 200)()
+                        or 200
+                    )
+                    target_h = (
+                        getattr(self, "img_label", None)
+                        and getattr(self.img_label, "winfo_height", lambda: 160)()
+                        or 160
+                    )
                     if not target_w or not target_h:
                         target_w, target_h = 200, 160
-                    img = img.resize((max(100, target_w), max(80, target_h)), Image.Resampling.LANCZOS)
+                    img = img.resize(
+                        (max(100, target_w), max(80, target_h)),
+                        Image.Resampling.LANCZOS,
+                    )
                     photo = ImageTk.PhotoImage(img)
 
                 # Store in weak cache and strong reference on label
@@ -4635,7 +5123,10 @@ class DashboardView(tk.Frame):
             from utils.export_utils import export_products_to_csv
 
             # Use configured DB path (portable) when available
-            db_path = getattr(Config, "DB_PATH", None) or Path("dist") / "data" / "inventory.db"
+            db_path = (
+                getattr(Config, "DB_PATH", None)
+                or Path("dist") / "data" / "inventory.db"
+            )
             count, out = export_products_to_csv(db_path, Path(file_path))
             return count, out
 
@@ -4647,10 +5138,18 @@ class DashboardView(tk.Frame):
                 pass
             count, path = result
             try:
-                self.audit_repo.log("EXPORT", "inventory", "", f"Exported {count} products to CSV", self.user.username)
+                self.audit_repo.log(
+                    "EXPORT",
+                    "inventory",
+                    "",
+                    f"Exported {count} products to CSV",
+                    self.user.username,
+                )
             except Exception:
                 logger.exception("Failed to write audit log for export")
-            messagebox.showinfo("Export Complete", f"Successfully exported {count} products to:\n{path}")
+            messagebox.showinfo(
+                "Export Complete", f"Successfully exported {count} products to:\n{path}"
+            )
             logger.info("Inventory exported to: %s", path)
             try:
                 self.export_btn.config(state="normal")
@@ -4670,7 +5169,12 @@ class DashboardView(tk.Frame):
             except Exception:
                 pass
 
-        run_in_background(target=do_export, on_complete=on_complete, on_error=on_error, master=self.master)
+        run_in_background(
+            target=do_export,
+            on_complete=on_complete,
+            on_error=on_error,
+            master=self.master,
+        )
 
     def _generate_report(self):
         """
@@ -4687,12 +5191,16 @@ class DashboardView(tk.Frame):
             stats = self.product_repo.get_statistics()
             products = self.product_repo.get_all()
 
-            low_stock_items = [p for p in products if p.stock_status in ["low", "critical"]]
+            low_stock_items = [
+                p for p in products if p.stock_status in ["low", "critical"]
+            ]
             aging_items = [p for p in products if p.is_aging]
             low_margin_items = [p for p in products if p.is_low_margin]
 
             # Calculate averages
-            margins = [float(p.profit_margin) for p in products if p.profit_margin is not None]
+            margins = [
+                float(p.profit_margin) for p in products if p.profit_margin is not None
+            ]
             avg_margin = sum(margins) / len(margins) if margins else 0.0
             health_scores = [p.health_score for p in products]
             avg_health = sum(health_scores) / len(health_scores) if health_scores else 0
@@ -4770,8 +5278,16 @@ LOW MARGIN PRODUCTS (<15%)
                 try:
                     with open(file_path, "w", encoding="utf-8") as f:
                         f.write(report)
-                    self.audit_repo.log("REPORT", "inventory", "", "Generated inventory report", self.user.username)
-                    messagebox.showinfo("Report Generated", f"Report saved to:\n{file_path}")
+                    self.audit_repo.log(
+                        "REPORT",
+                        "inventory",
+                        "",
+                        "Generated inventory report",
+                        self.user.username,
+                    )
+                    messagebox.showinfo(
+                        "Report Generated", f"Report saved to:\n{file_path}"
+                    )
                 except (IOError, PermissionError, OSError) as e:
                     logger.error("Failed to save report: %s", e)
                     messagebox.showerror("Save Failed", f"Could not save report:\n{e}")
@@ -4782,30 +5298,55 @@ LOW MARGIN PRODUCTS (<15%)
             logger.error("Report generation failed: %s", e)
             messagebox.showerror("Report Failed", f"Failed to generate report: {e}")
 
-        run_in_background(target=do_generate, on_complete=on_complete, on_error=on_error, master=self.master)
+        run_in_background(
+            target=do_generate,
+            on_complete=on_complete,
+            on_error=on_error,
+            master=self.master,
+        )
 
     def _open_user_management(self):
         """Open User Management window (Admin only)."""
         if not self.is_admin:
-            messagebox.showerror("Access Denied", "User Management is restricted to Administrators.")
+            messagebox.showerror(
+                "Access Denied", "User Management is restricted to Administrators."
+            )
             return
 
-        self.audit_repo.log("ACCESS", "user_management", "", "Opened User Management panel", self.user.username)
+        self.audit_repo.log(
+            "ACCESS",
+            "user_management",
+            "",
+            "Opened User Management panel",
+            self.user.username,
+        )
         UserManagementWindow(self.master, self.user, self.audit_repo)
 
     def _open_sales_window(self, product: Optional[Product] = None):
         """Open Sales/POS window (Manager/Admin only)."""
         if not self.can_modify:
-            messagebox.showerror("Access Denied", "Sales recording requires Manager or Admin role.")
+            messagebox.showerror(
+                "Access Denied", "Sales recording requires Manager or Admin role."
+            )
             return
 
-        self.audit_repo.log("ACCESS", "sales_pos", "", "Opened POS Terminal", self.user.username)
-        SalesWindow(self.master, self.user, product=product, on_sale_complete=self._refresh_data)
+        self.audit_repo.log(
+            "ACCESS", "sales_pos", "", "Opened POS Terminal", self.user.username
+        )
+        SalesWindow(
+            self.master, self.user, product=product, on_sale_complete=self._refresh_data
+        )
 
     def _handle_logout(self):
         """Handle user logout"""
         if messagebox.askyesno("Confirm Logout", "Are you sure you want to sign out?"):
-            self.audit_repo.log("LOGOUT", "user", self.user.username, "User signed out", self.user.username)
+            self.audit_repo.log(
+                "LOGOUT",
+                "user",
+                self.user.username,
+                "User signed out",
+                self.user.username,
+            )
             logger.info("User '%s' logged out", self.user.username)
             self.on_logout()
 

@@ -5,8 +5,8 @@ for unit testing repositories and application logic.
 """
 
 import tempfile
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
 from main import SQLiteDriver
 
@@ -19,14 +19,15 @@ class DBManager:
     """
 
     def __init__(self):
-        with tempfile.NamedTemporaryFile(prefix="inventory_test_", suffix=".db", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(
+            prefix="inventory_test_", suffix=".db", delete=False
+        ) as tmp:
             self.db_path = Path(tmp.name)
 
         # Initialize schema using a temporary connection
         driver = SQLiteDriver(self.db_path)
         driver.connect()
-        driver.executescript(
-            """
+        driver.executescript("""
             CREATE TABLE IF NOT EXISTS products (
                 sku TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -61,8 +62,7 @@ class DBManager:
                 notifications_enabled INTEGER,
                 updated_at TIMESTAMP
             );
-            """
-        )
+            """)
         driver.close()
 
     @contextmanager

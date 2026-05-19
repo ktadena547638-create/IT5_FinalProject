@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Tuple
 
 
-def _atomic_write_lines(out_path: Path, header: list, rows_iter, retries: int = 3, delay: float = 0.1):
+def _atomic_write_lines(
+    out_path: Path, header: list, rows_iter, retries: int = 3, delay: float = 0.1
+):
     """Write CSV atomically: write to temp file then replace.
 
     Retries replace on Windows to avoid transient lock errors.
@@ -23,13 +25,11 @@ def _atomic_write_lines(out_path: Path, header: list, rows_iter, retries: int = 
         os.fsync(f.fileno())
 
     # Replace atomically (os.replace should be atomic)
-    last_exc = None
     for attempt in range(retries):
         try:
             os.replace(str(tmp_path), str(out_path))
             return
-        except Exception as e:
-            last_exc = e
+        except Exception:
             time.sleep(delay * (attempt + 1))
 
     # final attempt without swallow
@@ -38,7 +38,9 @@ def _atomic_write_lines(out_path: Path, header: list, rows_iter, retries: int = 
         os.replace(str(tmp_path), str(out_path))
 
 
-def export_products_to_csv(db_path: Path, out_path: Path, chunk_size: int = 500) -> Tuple[int, Path]:
+def export_products_to_csv(
+    db_path: Path, out_path: Path, chunk_size: int = 500
+) -> Tuple[int, Path]:
     """Export the `products` table from SQLite at db_path to CSV at out_path.
 
     Uses chunked fetch to avoid large memory usage and atomic write to avoid partial files.
@@ -60,7 +62,9 @@ def export_products_to_csv(db_path: Path, out_path: Path, chunk_size: int = 500)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='products'"
+        )
         if not cur.fetchone():
             raise RuntimeError("No 'products' table in database")
 

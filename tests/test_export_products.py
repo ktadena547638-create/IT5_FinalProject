@@ -1,7 +1,6 @@
 import csv
 import sqlite3
 from pathlib import Path
-import tempfile
 
 from utils.export_utils import export_products_to_csv
 
@@ -9,8 +8,7 @@ from utils.export_utils import export_products_to_csv
 def create_sample_db(path: Path):
     conn = sqlite3.connect(str(path))
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE products (
             sku TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -19,13 +17,14 @@ def create_sample_db(path: Path):
             cost_price REAL,
             quantity INTEGER
         )
-        """
+        """)
+    cur.executemany(
+        "INSERT INTO products (sku, name, brand, price, cost_price, quantity) VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            ("A-001", "Test Item 1", "BrandX", 10.5, 7.0, 5),
+            ("A-002", "Test Item 2", "BrandY", 20.0, 12.5, 3),
+        ],
     )
-    cur.executemany("INSERT INTO products (sku, name, brand, price, cost_price, quantity) VALUES (?, ?, ?, ?, ?, ?)",
-                    [
-                        ("A-001", "Test Item 1", "BrandX", 10.5, 7.0, 5),
-                        ("A-002", "Test Item 2", "BrandY", 20.0, 12.5, 3),
-                    ])
     conn.commit()
     conn.close()
 

@@ -1,6 +1,7 @@
 """Unit tests for BackgroundTask threading and async operations."""
 
 import time
+
 from main import BackgroundTask, run_in_background
 
 
