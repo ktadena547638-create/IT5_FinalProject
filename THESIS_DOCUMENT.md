@@ -8,6 +8,15 @@ Instructor: Prof. Modesto C. Tarrazona
 Date: May 2026
 Version: 1.1.0
 
+FORMAT COMPLIANCE
+
+This document is formatted to follow the IT5 Python Project Document Template and the accompanying
+presentation format (PPTX). The provided template and PPTX presentation should be used when
+preparing the final submission and slides; the content and section ordering in this document
+adhere to that template's required structure.
+
+---
+
 ---
 
 ## EXECUTIVE SUMMARY
