@@ -10,41 +10,57 @@
 # Installation: pip install -r requirements.txt
 # ==============================================================================
 
-# Core Dependencies
-# ==================
+# ===============================================================================
+# Computer Inventory System (CIS) v1.0.1 - Locked/Recommended Dependencies
+# ===============================================================================
+# This file lists the packages required to run CIS. It contains two sections:
+# - "Runtime" : packages needed for the application to run on another machine
+# - "Dev/Test": optional developer tools used during development (not required
+#               for an end-user install)
+#
+# Usage (create a fresh venv before installing):
+#   python -m venv .venv
+#   .venv\Scripts\pip install --upgrade pip
+#   .venv\Scripts\pip install -r requirements.txt
+#
+# NOTE: tkinter and sqlite3 are part of the Python standard library and are
+#       not listed here. On Windows, ensure a standard Python installation is
+#       used (3.10+ recommended). For a fully reproducible environment use
+#       the pinned versions below.
+# ===============================================================================
 
-# Image processing for product images and UI rendering
-pillow>=10.0.0
+# -----------------
+# Runtime (pinned)
+# -----------------
+# These packages are required for the application to run.
+altgraph==0.17.5
+bcrypt==5.0.0
+lxml==6.0.2
+pillow==12.2.0
+pywin32-ctypes==0.2.3
+python-pptx==1.0.2
+typing_extensions==4.15.0
+xlsxwriter==3.2.9
 
-# Secure password hashing with BCrypt (12 rounds)
-bcrypt>=4.0.0
+# -----------------
+# Development / Build / Test (optional)
+# -----------------
+# These packages are useful when developing, testing or building the EXE.
+black==26.5.0
+flake8==7.3.0
+isort==8.0.1
+mypy==2.1.0
+pylint==4.0.5
+pytest==9.0.3
+pyinstaller==6.20.0
+pyinstaller-hooks-contrib==2026.5
 
-# Build & Distribution
-# ====================
-
-# PyInstaller for building standalone executables
-pyinstaller>=6.0.0
-
-# Presentation generation for academic deliverables
-python-pptx>=0.6.21
-
-# Development & Testing (Optional)
-# ==================================
-
-# Code formatting and linting
-black>=23.0.0
-flake8>=6.0.0
-pylint>=3.0.0
-isort>=5.0.0
-
-# Testing framework
-pytest>=9.0.0
-
-# Optional Database Drivers (Install as needed)
-# ==============================================
-
-# PostgreSQL support (uncomment to use)
-# psycopg2-binary>=2.9.0
-
-# MySQL support (uncomment to use)
-# mysql-connector-python>=8.0.0
+# -----------------
+# Notes
+# -----------------
+# - If you plan to build the EXE on another machine, install the build
+#   dependencies (pyinstaller and hooks). For a runtime-only install omit
+#   the build/dev section.
+# - If you need support for external DB backends (Postgres, MySQL), add the
+#   relevant driver package (psycopg2-binary, mysql-connector-python).
+# ===============================================================================
